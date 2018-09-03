@@ -1,0 +1,17 @@
+{% load static %}
+<html>
+  <head>
+    <script src="{% static '/react.js'%}"></script>
+    <script src="{% static '/react-dom.js'%}"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script type="application/javascript" src="https://unpkg.com/babel-standalone@6.26.0/babel.js"></script>
+    <script type="application/javascript" src="{% static '/aaa.js'%}"></script>
+  </head>
+  <body>
+    <div id="manage"><p><a href="{% url 'logout' %}">logout</a></p></div>
+    <div id="root">qwerty</div>
+    <script type="text/babel">
+      requestUsers();
+    </script>
+  </body>
+</html>
