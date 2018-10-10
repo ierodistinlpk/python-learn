@@ -9,5 +9,6 @@ for nam in Curr:
     t=Currency.objects.get_or_create(name=nam)
   
 Cat=['бензак','авто','еда','снаряга','квартплата']
+Cat=['бенз','бытовые','развлечения','подарки/инвестиции','прочее','отдых']
 for nam in Cat:
     t=Category.objects.get_or_create(name=nam)

@@ -84,9 +84,9 @@ DATABASES = {
 #    }
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'react',
-        'USER': 'react',
-        'PASSWORD': 'react',
+        'NAME': 'exp_dev',
+        'USER': 'exp_dev',
+        'PASSWORD': 'exp_dev',
         'HOSTNAME': 'localhost',
         'PORT': '',
     }
@@ -133,3 +133,5 @@ STATIC_URL = '/static/'
 
 LOGIN_REDIRECT_URL = '/aaa/'
 LOGOUT_REDIRECT_URL = '/aaa/'
+
+STATIC_ROOT = 'static/'

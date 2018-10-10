@@ -36,74 +36,6 @@ function getCookie(name){
     return h[name];
 }
 
-class Editline extends React.Component{
-    constructor(props) {
-	super(props);
-	console.log(props);
-	this.state = Object.assign({},props.data);
-	if (props.settings){
-	    this.state['is_expence']=true;
-	    this.state['is_approx']=false;
-	    for (var i=0;i<props.lists.length;i++){
-		this.state[props.lists[i].name]=props.settings[props.lists[i].name];
-	    }
-	}
-	this.handleChange = this.handleChange.bind(this);
-	this.handleSubmit = this.handleSubmit.bind(this);
-	
-    }
-    
-    handleChange(event) {
-	if (event.target.name!='id')
-	    this.setState({[event.target.name]: event.target.value});
-    }
-    handleCheckbox(event) {
-	    this.setState({[event.target.name]: event.target.checked});
-    }
-    
-    handleSubmit(event) {
-	event.preventDefault();
-	this.props.saveClick(this.state);
-    }
-    render(){
-	var res=[];
-        var keys = Object.keys(this.props.data);
-	let lists={};
-	for (var i=0;i<this.props.lists.length;i++){
-	    lists[this.props.lists[i].name]=this.props.lists[i].values;
-	}
-	for (var i = 0; i < keys.length; i++) {
-	    let field = null;
-	    if (Object.keys(lists).indexOf(keys[i])!=-1){
-		let options=[];
-		for (var j=0;j<lists[keys[i]].length;j++){
-		    options.push(React.createElement('option',{key:lists[keys[i]][j]},lists[keys[i]][j]));
-		}
-		field =  React.createElement('select',{name: keys[i], type:'text', value:this.state[keys[i]], onChange:this.handleChange},options)
-	    }
-	    else 
-	    {
-		if (keys[i].substr(0,3)=='is_')
-		    field =  React.createElement('input',{name: keys[i], type:'checkbox', checked:this.state[keys[i]], onChange:(e)=>this.handleCheckbox(e)})		
-		else{
-		    let fieldtype=(keys[i]=='exptime')?'date':'text';	
-		    field =  React.createElement('input',{name: keys[i], type:fieldtype, value:this.state[keys[i]], onChange:this.handleChange,'data-date-format':"YYYY-DD-MM"})
-		}
-	    }
-            res.push(React.createElement('tr', { name: keys[i], key: keys[i] },
-					 React.createElement('td',{name: keys[i]}, keys[i]),
-					 React.createElement('td',{name: keys[i]}, field)
-					)
-		    );
-        }
-	let save= React.createElement('input',{name:'save', type:'submit',value:'save'});
-	let cancel= React.createElement('input',{name:'cancel', type:'button', onClick:()=>this.props.cancelClick(),value:'close'});
-	return React.createElement('form',{id:'editform',name:'editform',onSubmit:(e)=>this.handleSubmit(e)},
-				   React.createElement('table',{},React.createElement('tbody',{},res)),
-				   save,cancel);
-    }
-}
-
 class ListTableView extends React.Component{
     render() {
 	let data=this.props.data;
@@ -122,7 +54,7 @@ class ListTableView extends React.Component{
 	//adding new line at bottomm
 	datalines.push(React.createElement(ControlledTableline, {key:'new',list:data.name , saveClick:(list,i)=>this.props.saveClick(list,i)}) );
 
-	let thead=React.createElement('thead', null, headlines);
+	let thead=React.createElement('thead', {className:"bg-light"}, headlines);
 	let tbody=React.createElement('tbody', {}, datalines);
         return (React.createElement('table', { name: data.name },
 				    thead,
@@ -185,35 +117,34 @@ class Area extends React.Component{
 	if (answer['error'])
 	    this.setState({message:answer['error']})
 	else{
-	    let changed=this.state['lists'].slice();	
+	    let changed=this.state['lists'].slice();
 	    if (answer['saved']){
 		let listname = Object.keys(answer['saved'])[0]
-		var list=changed.find((el)=>{return el.name=listname});
-		console.log(list)
-		list['values'].push(answer['saved'][listname]);
+		var list=changed.find((el)=>{return el.name==listname});
+		list.values.push(answer['saved'][listname]);
 	    }
 	    if (answer['deleted']){
 		let listname = Object.keys(answer['deleted'])[0]
-		var dellist=changed.find((el)=>{return el.name=listname});
-		dellist['values'].splice(dellist['values'].indexOf(answer['deleted'][listname]),1);
-	
+		var dellist=changed.find((el)=>{return el.name==listname});
+		dellist.values.splice(dellist['values'].indexOf(answer['deleted'][listname]),1);
 	    }
-	this.setState({lists:changed});
+	    this.setState({lists:changed});
+
 	}
     }
     render() {
-	console.log(this.state);
+	//console.log(this.state);
 
 	let tablebtn=React.createElement('a', { name: 'tableview', href: './'}, 'expences view');
 	
-	let controls=React.createElement('div',{},tablebtn);
-	let status = React.createElement('div',{},this.state.message);
+	let controls=React.createElement('div',{className:"col-lg-1 col-md-1 col-sm-12"},tablebtn);
+	let status = React.createElement('div',{className:"col-lg-12 col-md-12 col-sm-12"},this.state.message);
 	let tableviews=[];
 	for (var i=0; i<this.state.lists.length;i++){
 	    var list=this.state.lists[i];
-	    tableviews.push(React.createElement(ListTableView, { data:list, delClick:(list,id)=>this.delObj(list,id), saveClick:(list,id)=>this.saveObj(list,id) , name: list['name'], key:list['name'] }));
+	    tableviews.push(React.createElement('div',{key:i, className:"col-lg-3 col-md-6 col-sm-12"},React.createElement(ListTableView, { data:list, delClick:(list,id)=>this.delObj(list,id), saveClick:(list,id)=>this.saveObj(list,id) , name: list['name'], key:list['name'] })));
 	}
-	return (React.createElement('div',{},tablebtn,tableviews,status));
+	return (React.createElement('div',{className:"row"},controls,tableviews,status));
     }
 }
 

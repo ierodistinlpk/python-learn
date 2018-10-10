@@ -146,8 +146,8 @@ class Tableline extends React.Component{
 	    React.createElement('tr', {name:this.props.data.username},
 				res,
 				React.createElement('td', { name: 'control' },
-						    React.createElement('button', { name: 'edit', onClick:()=>{this.props.editClick(this.props.data.id);} }, 'edit'),
-						    React.createElement('button', { name: 'delete', onClick:()=>{this.props.delClick(this.props.data.id);} }, 'delete')))
+						    React.createElement('button', { name: 'edit', onClick:()=>{this.props.editClick(this.props.data.id);} }, 'E'),
+						    React.createElement('button', { name: 'delete', onClick:()=>{this.props.delClick(this.props.data.id);} }, 'X')))
 	    
 	);
     }
@@ -211,20 +211,21 @@ class Area extends React.Component{
 	let datefrom=React.createElement('input',{name: 'datefrom', type:'date', value:this.state.datefrom, onChange:(e)=>{this.handleDateChange(e);},'data-date-format':"YYYY-DD-MM"});
 	let dateto=React.createElement('input',{name: 'dateto', type:'date', value:this.state.dateto, onChange:(e)=>{this.handleDateChange(e);},'data-date-format':"YYYY-DD-MM"});
 	
-	let controls=React.createElement('div',{},formbtn,tablebtn,datefrom,dateto);
-	let status = React.createElement('div',{},this.state.message);
+	let controls=React.createElement('div',{className:"col-lg-3 col-md-3 col-sm-12"},formbtn,tablebtn,datefrom,dateto);
+	let status = React.createElement('div',{className:"col-lg-12 col-md-12 col-sm-12"},this.state.message);
 	if (this.state.editmode==-2){
 	    let empty={};
 	    Object.keys(this.state.data[Object.keys(this.state.data)[0]]).map((key)=>{empty[key]='';})
-	    let editview= React.createElement(EditForm,{data:empty,settings:this.state.settings, lists:this.state.lists, saveClick:(form)=>{this.saveEdit(form)},cancelClick:()=>{this.cancelEdit()}});
-	    return (React.createElement('div',{},controls,editview,status));
+	    let editview= React.createElement('div',{className:"col-lg-9 col-md-9 col-sm-12"},React.createElement(EditForm,{data:empty,settings:this.state.settings, lists:this.state.lists, saveClick:(form)=>{this.saveEdit(form)},cancelClick:()=>{this.cancelEdit()}}));
+	    return (React.createElement('div',{className:"row"},controls,editview,status));
 	}
 	if (this.state.editmode>-1){
-	    let editview=React.createElement(EditForm,{data:this.state.data.find((el)=>{return el.id==this.state.editmode}), /*settings:this.state.settings,*/ lists:this.state.lists, saveClick:(form)=>{this.saveEdit(form)},cancelClick:()=>{this.cancelEdit()}});
-	    return (React.createElement('div',{},controls,editview,status));
+	    let editview=React.createElement('div',{className:"col-lg-9 col-md-9 col-sm-12"},React.createElement(EditForm,{data:this.state.data.find((el)=>{return el.id==this.state.editmode}), /*settings:this.state.settings,*/ lists:this.state.lists, saveClick:(form)=>{this.saveEdit(form)},cancelClick:()=>{this.cancelEdit()}}));
+	    return (React.createElement('div',{className:"row"},controls,editview,status));
 	}
 	else{
-	    let tableview=React.createElement(TableView, { data:this.state.data, editClick:(id)=>this.editObj(id), delClick:(id)=>this.delObj(id),  name: 'users' });	            return (React.createElement('div',{},controls,tableview,status));
+	    let tableview=React.createElement('div',{className:"col-lg-9 col-md-9 col-sm-12"},React.createElement(TableView, { data:this.state.data, editClick:(id)=>this.editObj(id), delClick:(id)=>this.delObj(id),  name: 'users' }));
+	    return (React.createElement('div',{className:"row"},controls,tableview,status));
 	}
     }
 }
