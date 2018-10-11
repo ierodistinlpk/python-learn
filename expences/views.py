@@ -11,21 +11,19 @@ from datetime import datetime, timedelta
 # Create your views here.
 
 def index(request):
-    #if request.session.get('_auth_user_id'):
-
-    template = loader.get_template('exp/expences.html')
-    #else:
-    #    return HttpResponseRedirect('login')
+    if request.session.get('_auth_user_id'):
+        template = loader.get_template('exp/expences.html')
+    else:
+        return HttpResponseRedirect('login')
     return HttpResponse(template.render(None,request))
 
+#used for expences and settings pages
 def init(request):
     id=request.session.get('_auth_user_id')
     if not id:
         return HttpResponse(json.dumps({'error':'no user id found'}),content_type="application/json")
     settings= UserSettingsSerializer(Expuser.objects.filter(id=id).first())
     response={'settings':settings.data, 'lists':[{'name':'currency','values':list(Currency.objects.all().values_list('name',flat=True))}, {'name':'location', 'values':list(Location.objects.all().values_list('name',flat=True))},{'name':'category', 'values':list(Category.objects.all().values_list('name',flat=True))}] }
-    print(response)
-    
     return HttpResponse(json.dumps(response),content_type="application/json")
 
 def save(request):
@@ -92,12 +90,11 @@ def add_Expuser(sender, instance, created,**kwargs):
         e.save()
 
 def admin(request):
-    #if request.session.get('_auth_user_id') and user is admin:
-
-    template = loader.get_template('exp/admin.html')
-    return HttpResponse(template.render(None,request))
-    #else:
-    #    return HttpResponseRedirect('login')
+    if request.session.get('_auth_user_id'): #and user is admin:
+        template = loader.get_template('exp/admin.html')
+        return HttpResponse(template.render(None,request))
+    else:
+        return HttpResponseRedirect('login')
 
 def admindata(request):
     id=request.session.get('_auth_user_id')
@@ -134,6 +131,27 @@ def adminsave(request):
     except:
         return HttpResponse(json.dumps({'error':'internal error'}))
 
+# settings page
+# init request is used for data
+def settings(request):
+    if request.session.get('_auth_user_id'):
+        template = loader.get_template('exp/settings.html')
+        return HttpResponse(template.render(None,request))
+    else:
+        return HttpResponseRedirect('login')
+
+def savesettings(request):
+#    try:
+        body = json.loads(request.body.decode('utf-8'))
+        id=body.pop('id',None)
+        user=Expuser.objects.get(id=request.session.get('_auth_user_id'))
+        user.category,cr=Category.objects.get_or_create(name=body['category'])
+        user.currency,cr=Currency.objects.get_or_create(name=body['currency'])
+        user.location,cr=Location.objects.get_or_create(name=body['location'])
+        user.save()
+        return HttpResponse(json.dumps({'saved':UserSettingsSerializer(user).data}))
+#    except:
+#        return HttpResponse(json.dumps({'error':'internal error'}))
     
 class UserSettingsSerializer(serializers.ModelSerializer):
     #currency=serializers.SlugRelatedField(many=True, read_only=True,slug_field='name')
