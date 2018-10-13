@@ -23,7 +23,8 @@ def init(request):
     if not id:
         return HttpResponse(json.dumps({'error':'no user id found'}),content_type="application/json")
     settings= UserSettingsSerializer(Expuser.objects.filter(id=id).first())
-    response={'settings':settings.data, 'lists':[{'name':'currency','values':list(Currency.objects.all().values_list('name',flat=True))}, {'name':'location', 'values':list(Location.objects.all().values_list('name',flat=True))},{'name':'category', 'values':list(Category.objects.all().values_list('name',flat=True))}] }
+    fields=list(map(lambda f : f, ExpenceSerializer().fields))
+    response={'settings':settings.data, 'lists':[{'name':'currency','values':list(Currency.objects.all().values_list('name',flat=True))}, {'name':'location', 'values':list(Location.objects.all().values_list('name',flat=True))},{'name':'category', 'values':list(Category.objects.all().values_list('name',flat=True))}], 'fields':fields }
     return HttpResponse(json.dumps(response),content_type="application/json")
 
 def save(request):

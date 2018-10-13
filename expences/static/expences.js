@@ -4,9 +4,16 @@ function load(){
     ajaxRequest('GET','/exp/init',function(a,b,c){loadHandler(a,b,c)});
 }
 
+function formatDate(d){
+    return d.getFullYear()+'-'+('00'+(d.getMonth()+1)).slice(-2)+'-'+('00'+d.getDate()).slice(-2);
+}
+
 function loadHandler(respdata,textStatus,jqXHR){
     let data=JSON.parse(respdata);
-    ReactDOM.render(React.createElement(Area, { data:null,lists:data.lists,settings:data.settings, name: 'Expences' }),document.getElementById('area'));
+    let dateto=formatDate(new Date());
+    let datefrom=formatDate(new Date(Date.now()-86400000));
+    let area=ReactDOM.render(React.createElement(Area, { data:null,lists:data.lists,settings:data.settings,fields:data.fields, dateto:dateto, datefrom:datefrom, name: 'Expences' }),document.getElementById('area'));
+    area.requestTable();
 }
 
 function ajaxRequest(method,url,processor,params) {
@@ -27,6 +34,7 @@ function ajaxRequest(method,url,processor,params) {
     }
     xmlhttp.send(params);
 }
+
 function getCookie(name){
     let h={};
     let cookie=document.cookie.split('; ').map((item)=>{
@@ -39,20 +47,25 @@ function getCookie(name){
 class EditForm extends React.Component{
     constructor(props) {
 	super(props);
-	console.log(props);
-	this.state = Object.assign({},props.data);
+	if (props.data)
+	    this.state = Object.assign({},props.data);
+	else{
+	    this.state = {}
+	    props.fields.forEach((f)=>{this.state[f]=''});
+	    let d=new Date();
+	    this.state['exptime']=d.getFullYear()+'-'+('00'+(d.getMonth()+1)).slice(-2)+'-'+('00'+d.getDate()).slice(-2);
+	}
+	console.log(this.state);
 	if (props.settings){
 	    this.state['is_expence']=true;
 	    this.state['is_approx']=false;
-	    for (var i=0;i<props.lists.length;i++){
+	    for (let i=0;i<props.lists.length;i++){
 		this.state[props.lists[i].name]=props.settings[props.lists[i].name];
 	    }
 	}
 	this.handleChange = this.handleChange.bind(this);
 	this.handleSubmit = this.handleSubmit.bind(this);
-	
     }
-    
     handleChange(event) {
 	if (event.target.name!='id')
 	    this.setState({[event.target.name]: event.target.value});
@@ -60,39 +73,38 @@ class EditForm extends React.Component{
     handleCheckbox(event) {
 	    this.setState({[event.target.name]: event.target.checked});
     }
-    
     handleSubmit(event) {
 	event.preventDefault();
 	this.props.saveClick(this.state);
     }
     render(){
 	var res=[];
-        var keys = Object.keys(this.props.data);
+	let fields = this.props.fields;
 	let lists={};
-	for (var i=0;i<this.props.lists.length;i++){
+	for (let i=0;i<this.props.lists.length;i++){
 	    lists[this.props.lists[i].name]=this.props.lists[i].values;
 	}
-	for (var i = 0; i < keys.length; i++) {
+	for (let i = 0; i < fields.length; i++) {
 	    let field = null;
-	    if (Object.keys(lists).indexOf(keys[i])!=-1){
+	    if (Object.keys(lists).indexOf(fields[i])!=-1){
 		let options=[];
-		for (var j=0;j<lists[keys[i]].length;j++){
-		    options.push(React.createElement('option',{key:lists[keys[i]][j]},lists[keys[i]][j]));
+		for (let j=0;j<lists[fields[i]].length;j++){
+		    options.push(React.createElement('option',{key:lists[fields[i]][j]},lists[fields[i]][j]));
 		}
-		field =  React.createElement('select',{name: keys[i], type:'text', value:this.state[keys[i]], onChange:this.handleChange},options)
+		field =  React.createElement('select',{name: fields[i], type:'text', value:this.state[fields[i]], onChange:this.handleChange},options)
 	    }
 	    else 
 	    {
-		if (keys[i].substr(0,3)=='is_')
-		    field =  React.createElement('input',{name: keys[i], type:'checkbox', checked:this.state[keys[i]], onChange:(e)=>this.handleCheckbox(e)})		
+		if (fields[i].substr(0,3)=='is_')
+		    field =  React.createElement('input',{name: fields[i], type:'checkbox', checked:this.state[fields[i]], onChange:(e)=>this.handleCheckbox(e)})
 		else{
-		    let fieldtype=(keys[i]=='exptime')?'date':'text';	
-		    field =  React.createElement('input',{name: keys[i], type:fieldtype, value:this.state[keys[i]], onChange:this.handleChange,'data-date-format':"YYYY-DD-MM"})
+		    let fieldtype=(fields[i]=='exptime')?'date':'text';	
+		    field =  React.createElement('input',{name: fields[i], type:fieldtype, value:this.state[fields[i]], onChange:this.handleChange,'data-date-format':"YYYY-DD-MM"})
 		}
 	    }
-            res.push(React.createElement('tr', { name: keys[i], key: keys[i] },
-					 React.createElement('td',{name: keys[i]}, keys[i]),
-					 React.createElement('td',{name: keys[i]}, field)
+            res.push(React.createElement('tr', { name: fields[i], key: fields[i] },
+					 React.createElement('td',{name: fields[i]}, fields[i]),
+					 React.createElement('td',{name: fields[i]}, field)
 					)
 		    );
         }
@@ -110,7 +122,6 @@ class TableView extends React.Component{
 	let data=this.props.data;
 	if (data==null || data.length<1)
 	    return React.createElement('p',{},'data is null =(');
-	
 	let keys=Object.keys(data[Object.keys(data)[0]]);
 	for (let i=0;i< keys.length;i++){
 	    hres.push(React.createElement('td', { name: keys[i], key: keys[i] }, keys[i]));
@@ -118,7 +129,7 @@ class TableView extends React.Component{
 	let headlines=React.createElement('tr',{},hres);
 	let datalines=[];
 	let ids=Object.keys(data)
-	for (var i = 0; i < ids.length; i++) {
+	for (let i = 0; i < ids.length; i++) {
             datalines.push(
 		React.createElement(Tableline, {num:i, key:ids[i], data:data[ids[i]], editClick:(i)=>{this.props.editClick(i)}, delClick:(i)=>this.props.delClick(i)})
 	    );
@@ -139,7 +150,7 @@ class Tableline extends React.Component{
 	var res = [];
         var data = this.props.data;
         var keys = Object.keys(data);
-        for (var i = 0; i < keys.length; i++) {
+        for (let i = 0; i < keys.length; i++) {
             res.push(React.createElement('td', { name: keys[i], key: keys[i] }, (data[keys[i]]===true)?'✔':data[keys[i]]));
         }
         return (
@@ -156,7 +167,7 @@ class Tableline extends React.Component{
 class Area extends React.Component{
     constructor(props){
 	super(props);
-	this.state={data:props.data,settings:props.settings,lists:props.lists, message:'', editmode:-1, message:'',datefrom:'2018-08-01',dateto:'2018-09-01'};
+	this.state=Object.assign({message:'', editmode:-1},props);
     }
     editObj(id) {
 	this.setState({editmode:id});
@@ -171,7 +182,7 @@ class Area extends React.Component{
 	    this.setState({message:answer['error']})
 	else{
 	    if (answer['saved']){
-		for (var i=0;i<answer['saved'].length;i++){
+		for (let i=0;i<answer['saved'].length;i++){
 		    let item=newdata.find((el)=>{return el.id==answer['saved'][i].id});
 		    item?newdata.splice(newdata.indexOf(item),1,answer['saved'][i]):newdata.push(answer['saved'][i]);
 		}
@@ -214,13 +225,11 @@ class Area extends React.Component{
 	let controls=React.createElement('div',{className:"col-lg-3 col-md-3 col-sm-12"},formbtn,tablebtn,datefrom,dateto);
 	let status = React.createElement('div',{className:"col-lg-12 col-md-12 col-sm-12"},this.state.message);
 	if (this.state.editmode==-2){
-	    let empty={};
-	    Object.keys(this.state.data[Object.keys(this.state.data)[0]]).map((key)=>{empty[key]='';})
-	    let editview= React.createElement('div',{className:"col-lg-9 col-md-9 col-sm-12"},React.createElement(EditForm,{data:empty,settings:this.state.settings, lists:this.state.lists, saveClick:(form)=>{this.saveEdit(form)},cancelClick:()=>{this.cancelEdit()}}));
+	    let editview= React.createElement('div',{className:"col-lg-9 col-md-9 col-sm-12"},React.createElement(EditForm,{data:null,settings:this.state.settings, lists:this.state.lists, fields:this.state.fields, saveClick:(form)=>{this.saveEdit(form)},cancelClick:()=>{this.cancelEdit()}}));
 	    return (React.createElement('div',{className:"row"},controls,editview,status));
 	}
 	if (this.state.editmode>-1){
-	    let editview=React.createElement('div',{className:"col-lg-9 col-md-9 col-sm-12"},React.createElement(EditForm,{data:this.state.data.find((el)=>{return el.id==this.state.editmode}), /*settings:this.state.settings,*/ lists:this.state.lists, saveClick:(form)=>{this.saveEdit(form)},cancelClick:()=>{this.cancelEdit()}}));
+	    let editview=React.createElement('div',{className:"col-lg-9 col-md-9 col-sm-12"},React.createElement(EditForm,{data:this.state.data.find((el)=>{return el.id==this.state.editmode}),  lists:this.state.lists, fields:this.state.fields, saveClick:(form)=>{this.saveEdit(form)},cancelClick:()=>{this.cancelEdit()}}));
 	    return (React.createElement('div',{className:"row"},controls,editview,status));
 	}
 	else{
