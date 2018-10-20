@@ -30,3 +30,5 @@ class Expuser(User):
     category = models.ForeignKey('Category',on_delete=models.PROTECT)
     currency = models.ForeignKey('Currency',on_delete=models.PROTECT)
     location = models.ForeignKey('Location',on_delete=models.PROTECT)
+
+
