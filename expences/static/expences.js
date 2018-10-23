@@ -12,36 +12,8 @@ function loadHandler(respdata,textStatus,jqXHR){
     let data=JSON.parse(respdata);
     let dateto=formatDate(new Date());
     let datefrom=formatDate(new Date(Date.now()-86400000));
-    let area=ReactDOM.render(React.createElement(Area, { data:null,lists:data.lists,settings:data.settings,fields:data.fields, dateto:dateto, datefrom:datefrom, name: 'Expences' }),document.getElementById('area'));
+    let area=ReactDOM.render(React.createElement(Area, { data:null,lists:data.lists,settings:data.settings,fields:data.fields, dateto:dateto, datefrom:datefrom, name: 'Expences', charts:true }),document.getElementById('area'));
     area.requestTable();
-}
-
-function ajaxRequest(method,url,processor,params) {
-    var xmlhttp = new XMLHttpRequest();
-    xmlhttp.onreadystatechange = function() {
-        if (xmlhttp.readyState == XMLHttpRequest.DONE) {   // XMLHttpRequest.DONE == 4
-            if (xmlhttp.status == 200) {
-		processor(xmlhttp.responseText);
-	    }
-            else {
-		console.log('something else other than 200 was returned.'+xmlhttp.status );
-            }
-        }
-    };
-    xmlhttp.open(method, url, true);
-    if (method=='POST'){
-	xmlhttp.setRequestHeader("X-CSRFToken", getCookie("csrftoken"));
-    }
-    xmlhttp.send(params);
-}
-
-function getCookie(name){
-    let h={};
-    let cookie=document.cookie.split('; ').map((item)=>{
-	let pair=item.split('=');
-	h[pair[0]]=pair[1];
-	return pair; });
-    return h[name];
 }
 
 class EditForm extends React.Component{
@@ -67,8 +39,10 @@ class EditForm extends React.Component{
 	this.handleSubmit = this.handleSubmit.bind(this);
     }
     handleChange(event) {
-	if (event.target.name!='id')
-	    this.setState({[event.target.name]: event.target.value});
+	if (event.target.name!='id'){
+	    let val=(event.target.name=='summ')?event.target.value.replace(',','.'):event.target.value
+	    this.setState({[event.target.name]: val});
+	}
     }
     handleCheckbox(event) {
 	    this.setState({[event.target.name]: event.target.checked});
@@ -125,7 +99,7 @@ function TableView(props){
     let hres=[];
     let data=props.data;
     if (data==null || data.length<1)
-	return React.createElement('p',{},'data is null =(');
+	return React.createElement('p',{},'no data to show');
     let keys=Object.keys(data[Object.keys(data)[0]]);
 	for (let i=0;i< keys.length;i++){
 	    hres.push(React.createElement('td', { name: keys[i], key: keys[i] }, keys[i]));
@@ -165,9 +139,10 @@ function Tableline(props){
 
 function StatView(props){
     //matrix view
+    console.log(props.charts);
     if (!props.data.length)
 	return React.createElement('p',{},'no data to show');
-    if (0&&props.data[0].category){
+    if (!props.charts){
 	//extract all categories, associate with column numbers
 	let columns = props.data.map(i=>i.category).filter((value, index, self)=>self.indexOf(value) === index);
 	let dates=props.data.map(i=>i.exptime).filter((value, index, self)=>self.indexOf(value) === index);
@@ -211,82 +186,71 @@ function StatView(props){
 	let graphs=[];
 	let currencies = props.data.map(i=>i.currency).filter((value, index, self)=>self.indexOf(value) === index);
 	for (let i=0;i<currencies.length;i++){
-	    let data=props.data.map(x=>Object.assign({},{"day":x.exptime.slice(-2),"summ":(x.currency==currencies[i])?x.summ:0,"cat":x.category}));
-	    console.log(data);
-	    graphs.push(React.createElement(VBarChart,{key:currencies[i],curr:currencies[i],data:data}));
+	    let data=props.data.map(x=>Object.assign({},{"day":x.exptime,"summ":(x.currency==currencies[i])?x.summ:0,"cat":x.category}));
+	    graphs.push(React.createElement(VBarChart,{key:'b'+currencies[i],curr:currencies[i],data:data}));
+	    graphs.push(React.createElement(PieChart,{key:'p'+currencies[i],curr:currencies[i],data:data}));
 	}
 	return React.createElement('div',{},graphs);
     }
 }
 
 class VBarChart extends React.Component{
-    constructor(props) {
-	super(props);
-	this.state = {
-	    data:props.data
-	};
-    }
     componentDidMount() {
-	const { data, highlightedPoint } = this.props;
 	const spec = this._spec();
 	var view = new vega.View(vega.parse(spec), {
 	    logLevel: vega.Warn,
 	    renderer: 'canvas'
-	}).initialize('#chartContainer'+this.props.curr).hover().run();
+	}).initialize('#chartContainerb'+this.props.curr).hover().run();
+	view.addEventListener('click', (event,value)=>console.log(event,value));
     }
-    
     componentDidUpdate() {
 	const spec = this._spec();
 	var view = new vega.View(vega.parse(spec), {
-	    //loader: vega.loader({baseURL: '/vega/'}),
 	    logLevel: vega.Warn,
 	    renderer: 'canvas'
-	}).initialize('#chartContainer'+this.props.curr).hover().run();
-    }
-    
+	}).initialize('#chartContainerb'+this.props.curr).hover().run();
+    	//view.addEventListener('click', (event,value)=>showDetails(event,value));
+    }    
     // dummy render method that creates the container vega draws inside
     render() {
-	return React.createElement('div',{ref:'chartContainer'+this.props.curr, id:'chartContainer'+this.props.curr});
+	return React.createElement('div',{ref:'chartContainerb'+this.props.curr, id:'chartContainerb'+this.props.curr});
     }
     // the vega spec for the chart
     _spec() {
 	return {
 	    "$schema": "https://vega.github.io/schema/vega/v4.json",
+	    "description":"expenses by date, "+this.props.curr,
 	    "width": 500,
 	    "height": 200,
 	    "padding": 5,
-
 	    "data": [
 		{
 		    "name": "table",
-		    "values": this.state.data/*[
-			{"exptime": 'a', "y": 28, "c":0}, {"exptime": 'a', "y": 55, "c":1},
-			{"exptime": 9, "y": 49, "c":0}, {"exptime": 9, "y": 15, "c":1}
-		    ]*/,
+		    "values": this.props.data,
 		    "transform": [
 			{
 			    "type": "stack",
 			    "groupby": ["day"],
 			    "sort": {"field": "cat"},
+			    "as" : ["s0","s1"],
 			    "field": "summ"
 			}
 		    ]
 		}
 	    ],
-
 	    "scales": [
 		{
-		    "name": "x",
+		    "name": "date",
 		    "type": "band",
 		    "range": "width",
 		    "domain": {"data": "table", "field": "day"}
 		},
 		{
-		    "name": "y",
+		    "name": "money",
 		    "type": "linear",
 		    "range": "height",
 		    "nice": true, "zero": true,
-		    "domain": {"data": "table", "field": "y1"}
+		    "domain": {"data": "table", "field": "s1"}
 		},
 		{
 		    "name": "color",
@@ -295,22 +259,24 @@ class VBarChart extends React.Component{
 		    "domain": {"data": "table", "field": "cat"}
 		}
 	    ],
-
 	    "axes": [
-		{"orient": "bottom", "scale": "x", "zindex": 1},
-		{"orient": "left", "scale": "y", "zindex": 1}
+		{"orient": "bottom", "scale": "date", "zindex": 1, "labelAngle":-90,"labelAlign":"right"},
+		{"orient": "left", "scale": "money", "zindex": 1, "grid":true,"tickCount": 5}
 	    ],
 
+	    "legends":[
+		{fill:"color"}
+	    ],
 	    "marks": [
 		{
 		    "type": "rect",
 		    "from": {"data": "table"},
 		    "encode": {
 			"enter": {
-			    "x": {"scale": "x", "field": "day"},
-			    "width": {"scale": "x", "band": 1, "offset": -1},
-			    "y": {"scale": "y", "field": "y0"},
-			    "y2": {"scale": "y", "field": "y1"},
+			    "x": {"scale": "date", "field": "day"},
+			    "width": {"scale": "date", "band": 1, "offset": -1},
+			    "y": {"scale": "money", "field": "s0"},
+			    "y2": {"scale": "money", "field": "s1"},
 			    "fill": {"scale": "color", "field": "cat"}
 			},
 			"update": {
@@ -321,11 +287,98 @@ class VBarChart extends React.Component{
 			}
 		    }
 		}
-	    ]  
+	    ],
 	};
     }
     
 }
+
+
+class PieChart extends React.Component{
+    componentDidMount() {
+	const spec = this._spec();
+	var view = new vega.View(vega.parse(spec), {
+	    logLevel: vega.Warn,
+	    renderer: 'canvas'
+	}).initialize('#chartContainer'+this.props.curr).hover().run();
+	view.addEventListener('click', (event,value)=>console.log(event,value));
+    }    
+    componentDidUpdate() {
+	const spec = this._spec();
+	var view = new vega.View(vega.parse(spec), {
+	    logLevel: vega.Warn,
+	    renderer: 'canvas'
+	}).initialize('#chartContainer'+this.props.curr).hover().run();
+	view.addEventListener('click', (event,value)=>console.log(event,value));
+
+    }
+    render() {
+	return React.createElement('div',{ref:'chartContainer'+this.props.curr, id:'chartContainer'+this.props.curr});
+    }
+    // the vega spec for the chart
+    _spec() {
+	return {
+	    "$schema": "https://vega.github.io/schema/vega/v4.json",
+	    "width": 400,
+	    "height": 200,
+	    "autosize": "pad",
+
+	    "data": [
+		{
+		    "name": "table",
+		    "values": this.props.data,
+		    "transform": [
+			{"type":"aggregate",
+			 "groupby": ["cat"],
+			 "fields":["summ"],
+			 "ops":["sum"],
+			 "as":["sum"]
+			},
+			{
+			    "type": "pie",
+			    "field": "sum"
+			}
+		    ]
+		}
+	    ],
+	    "scales": [
+		{
+		    "name": "color",
+		    "type": "ordinal",
+		    "domain": {"data": "table", "field": "cat"},
+		    "range": {"scheme": "category20"}
+		}
+	    ],
+
+	    "legends":[
+		{fill:"color"}
+	    ],
+	    "marks": [
+		{
+		    "type": "arc",
+		    "from": {"data": "table"},
+		    "encode": {
+			"enter": {
+			    "fill": {"scale": "color", "field": "cat"},
+			    "x": {"signal": "width / 2"},
+			    "y": {"signal": "height / 2"}
+			},
+			"update": {
+			    "startAngle": {"field": "startAngle"},
+			    "endAngle": {"field": "endAngle"},
+			    "outerRadius": {"signal": "height / 2"},
+			    "fillOpacity": {"value": 1}
+			},
+			"hover": {
+			    "fillOpacity": {"value": 0.5}
+			}	   
+		    } 
+		},
+	    ]
+	}
+    };
+}
+    
 
 function StatCell(props){
     if (typeof(props.items)=='string')
@@ -399,6 +452,9 @@ class Area extends React.Component{
     handleDateChange(event){
 	    this.setState({[event.target.name]: event.target.value});
     }
+    handleCheckbox(event) {
+	this.setState({[event.target.name]: event.target.checked});
+    }
     render() {
 	/*new record button*/
 	let formbtn=React.createElement('button', { name: 'formview', onClick:()=>{this.editObj(this.newrecord);} }, 'new');
@@ -409,7 +465,9 @@ class Area extends React.Component{
 	let statbuttons=[];
 	for (let key in statistics)
 	    statbuttons.push(React.createElement('button', { name: key, key:key, onClick:()=>{this.requestStat(key);} },statistics[key] ));
-
+	statbuttons.push(React.createElement('p',{key:'chart'},
+					     'show Charts',
+					     React.createElement('input',{type:'checkbox',name:'charts', checked:this.state.charts, onChange:(e)=>this.handleCheckbox(e)})));
 	/*date fields*/
 	let datefrom=React.createElement('input',{name: 'datefrom', type:'date', value:this.state.datefrom, onChange:(e)=>{this.handleDateChange(e);},'data-date-format':"YYYY-DD-MM"});
 	let dateto=React.createElement('input',{name: 'dateto', type:'date', value:this.state.dateto, onChange:(e)=>{this.handleDateChange(e);},'data-date-format':"YYYY-DD-MM"});
@@ -443,7 +501,7 @@ class Area extends React.Component{
 	/*TODO: create processing for statistics*/
 	if (this.state.editmode==this.statmode){
 	    workarea=React.createElement('div',{className:"col-lg-9 col-md-9 col-sm-12"},
-					 React.createElement(StatView, { data:this.state.stat, name: 'stat' }));
+					 React.createElement(StatView, { data:this.state.stat, name: 'stat', charts:this.state.charts }));
 	}
 	return (React.createElement('div',{className:"row"},controls,workarea,status));
     }
