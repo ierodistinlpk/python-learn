@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseRedirect
 from django.template import loader
 from expences.models import Expuser, Expence, Location, Currency,Category
-from expences.serializers import UserSettingsSerializer, ExpenceSerializer, ExpenceDateSerializer, ExpenceCatDateSerializer 
+from expences.serializers import UserSettingsSerializer, ExpenceSerializer, ExpenceShortSerializer, ExpenceDateSerializer, ExpenceCatDateSerializer 
 from django.dispatch import receiver
 from django.db.models.signals import post_save
 from django.db.models import Sum, FloatField
@@ -68,11 +68,22 @@ def delete(request):
 def table(request):
     starttime=request.GET.get('from',datetime.now()-timedelta(30))
     endtime=request.GET.get('to',datetime.now())
-    try:
-        response=ExpenceSerializer(Expence.objects.filter(exptime__gte = starttime,exptime__lte=endtime),many=True).data
-        return HttpResponse(json.dumps(response),content_type="application/json")
-    except:
-       return HttpResponse(json.dumps({'error':'internal error'}))
+    shorter=request.GET.get('short',False)
+    category=request.GET.get('category',None)
+    #try:
+    objects=Expence.objects.filter(exptime__gte = starttime,exptime__lte=endtime)
+    if category:
+        print ('using cat')
+        objects=objects.filter(category=category)
+    if shorter:
+        print ('using short')
+        response=ExpenceShortSerializer(objects,many=True).data
+        print (response)
+    else:
+        response=ExpenceSerializer(objects,many=True).data
+    return HttpResponse(json.dumps(response),content_type="application/json")
+    #except:
+    #   return HttpResponse(json.dumps({'error':'internal error'}))
 
 def aggr(request):
     starttime=request.GET.get('from',datetime.now()-timedelta(30))

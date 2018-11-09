@@ -1,0 +1,8 @@
+.tltip{
+}
+.tltip p{
+   display:inline;
+}  
+.tltip p:hover{
+    color:red;
+}

@@ -102,14 +102,15 @@ function TableView(props){
 	return React.createElement('p',{},'no data to show');
     let keys=Object.keys(data[Object.keys(data)[0]]);
 	for (let i=0;i< keys.length;i++){
-	    hres.push(React.createElement('td', { name: keys[i], key: keys[i] }, keys[i]));
+	    	if (keys[i]!='id')
+		    hres.push(React.createElement('td', { name: keys[i], key: keys[i] }, keys[i]));
         }
     let headlines=React.createElement('tr',{},hres);
     let datalines=[];
     let ids=Object.keys(data)
     for (let i = 0; i < ids.length; i++) {
         datalines.push(
-	    React.createElement(Tableline, {num:i, key:ids[i], data:data[ids[i]], editClick:(i)=>{props.editClick(i)}, delClick:(i)=>props.delClick(i)})
+	    React.createElement(Tableline, {num:i, key:ids[i], data:data[ids[i]], editClick:(i)=>{props.editClick(i)}, delClick:(i)=>props.delClick(i), readonly:props.readonly})
 	);
 	
     }
@@ -125,28 +126,28 @@ function Tableline(props){
     var data = props.data;
     var keys = Object.keys(data);
     for (let i = 0; i < keys.length; i++) {
-        res.push(React.createElement('td', { name: keys[i], key: keys[i] }, (data[keys[i]]===true)?'✔':data[keys[i]]));
+	if (keys[i]!='id')
+            res.push(React.createElement('td', { name: keys[i], key: keys[i] }, (data[keys[i]]===true)?'✔':data[keys[i]]));
     }
+    let bootstrap='border-top';
     return (
-	React.createElement('tr', {name:props.data.username},
+	React.createElement('tr', {name:props.data.username, className:bootstrap},
 			    res,
-			    React.createElement('td', { name: 'control' },
+			    (props.readonly)?null:React.createElement('td', { name: 'control' },
 						React.createElement('button', { name: 'edit', onClick:()=>{props.editClick(props.data.id);} }, 'E'),
 						React.createElement('button', { name: 'delete', onClick:()=>{props.delClick(props.data.id);} }, 'X')))
-	
     );
 }
 
 function StatView(props){
-    //matrix view
-    console.log(props.charts);
+    //matrix view - statistics table
     if (!props.data.length)
 	return React.createElement('p',{},'no data to show');
     if (!props.charts){
-	//extract all categories, associate with column numbers
+	//extract all categories, associate with column numbers, uniq with filter
 	let columns = props.data.map(i=>i.category).filter((value, index, self)=>self.indexOf(value) === index);
 	let dates=props.data.map(i=>i.exptime).filter((value, index, self)=>self.indexOf(value) === index);
-	let matrix={};
+	let matrix={}; //matrix to me reflected to table
 	for (let i=0;i<props.data.length;i++){
 	    let cell=props.data[i];
 	    if (!matrix[cell.exptime])
@@ -156,11 +157,11 @@ function StatView(props){
 	    matrix[cell.exptime][cell.category][cell.currency]=cell.summ;
 	}
 	//console.log(matrix);
-	let table=[];
-	let totalpercol={};
+	let table=[]; //showing matrix
+	let totalpercol={}; //summary per column
 	for (let i=0;i<dates.length;i++){
-	    let row=[StatCell({items:dates[i],key:'date'})];
-	    let totalperline={};
+	    let row=[StatCell({items:dates[i],key:'date'})]; //dates
+	    let totalperline={}; //summary per day
 	    for (let j=0;j<columns.length;j++){
 		row.push(StatCell({key:'c'+j, items:matrix[dates[i]][columns[j]]}));
 		for (tots in matrix[dates[i]][columns[j]]){ 
@@ -187,8 +188,8 @@ function StatView(props){
 	let currencies = props.data.map(i=>i.currency).filter((value, index, self)=>self.indexOf(value) === index);
 	for (let i=0;i<currencies.length;i++){
 	    let data=props.data.map(x=>Object.assign({},{"day":x.exptime,"summ":(x.currency==currencies[i])?x.summ:0,"cat":x.category}));
-	    graphs.push(React.createElement(VBarChart,{key:'b'+currencies[i],curr:currencies[i],data:data}));
-	    graphs.push(React.createElement(PieChart,{key:'p'+currencies[i],curr:currencies[i],data:data}));
+	    graphs.push(React.createElement(VBarChart,{key:'b'+currencies[i],curr:currencies[i],data:data, requestfun:props.requestfun}));
+	    graphs.push(React.createElement(PieChart,{key:'p'+currencies[i],curr:currencies[i],data:data, requestfun:props.requestfun}));
 	}
 	return React.createElement('div',{},graphs);
     }
@@ -201,7 +202,7 @@ class VBarChart extends React.Component{
 	    logLevel: vega.Warn,
 	    renderer: 'canvas'
 	}).initialize('#chartContainerb'+this.props.curr).hover().run();
-	view.addEventListener('click', (event,value)=>console.log(event,value));
+	view.addEventListener('click', (event,value)=>{this.props.requestfun(value.datum.cat, true, value.datum.day, value.datum.day, event.clientX, event.clientY)});
     }
     componentDidUpdate() {
 	const spec = this._spec();
@@ -209,7 +210,7 @@ class VBarChart extends React.Component{
 	    logLevel: vega.Warn,
 	    renderer: 'canvas'
 	}).initialize('#chartContainerb'+this.props.curr).hover().run();
-    	//view.addEventListener('click', (event,value)=>showDetails(event,value));
+    	view.addEventListener('click', (event,value)=>this.props.requestfun(value.datum.cat, true, value.datum.day, value.datum.day, event.clientX, event.clientY));
     }    
     // dummy render method that creates the container vega draws inside
     render() {
@@ -301,7 +302,7 @@ class PieChart extends React.Component{
 	    logLevel: vega.Warn,
 	    renderer: 'canvas'
 	}).initialize('#chartContainer'+this.props.curr).hover().run();
-	view.addEventListener('click', (event,value)=>console.log(event,value));
+	view.addEventListener('click', (event,value)=>{console.log(event);this.props.requestfun(value.datum.cat, true,null,null, event.clientX, event.clientY)});
     }    
     componentDidUpdate() {
 	const spec = this._spec();
@@ -309,7 +310,7 @@ class PieChart extends React.Component{
 	    logLevel: vega.Warn,
 	    renderer: 'canvas'
 	}).initialize('#chartContainer'+this.props.curr).hover().run();
-	view.addEventListener('click', (event,value)=>console.log(event,value));
+	view.addEventListener('click', (event,value)=>this.props.requestfun(value.datum.cat, true, null,null, event.clientX, event.clientY));
 
     }
     render() {
@@ -388,16 +389,37 @@ function StatCell(props){
 	for (i in props.items){
 	    items.push(React.createElement('p',{onClick:()=>{null}, key:[i]},props.items[i]+' '+i));
 	}
-    return React.createElement('td',{key:props.key},items);
+    let bootstrap='border-top';
+    return React.createElement('td',{key:props.key, className:bootstrap},items);
 }
 
+class Tooltip extends React.Component{
+    constructor(props){
+	super(props);
+	this.state={styles:props.style};
+    }
+    componentDidMount() {
+	this.setState({styles:this.props.style});
+    }
+
+    componentWillReceiveProps(nextProps){
+	this.setState({styles:nextProps.style});
+    }
+    render(){
+	let closebtn=React.createElement('p',{onClick:()=>this.props.close(), className:"font-weight-bold float-right"},'X');
+	let table=React.createElement(TableView,{data:this.props.data, name: 'helpertable', readonly:true});
+	console.log(this.state.styles);
+	let bootstrap='position-absolute border border-dark bg-light rounded p-2'
+	return React.createElement('div',{className:'tltip '+bootstrap, style:this.state.styles},closebtn,table);
+    }
+}
 class Area extends React.Component{ 
     constructor(props){
 	super(props);
 	this.newrecord=-1;
 	this.tablemode=-2;
 	this.statmode=-3;
-	this.state=Object.assign({message:'', editmode:this.tablemode},props);
+	this.state=Object.assign({message:'', editmode:this.tablemode, tooltip:null,tooltiposition:{left:100,top:100}},props);
     }
     editObj(id) {
 	this.setState({editmode:id});
@@ -433,20 +455,35 @@ class Area extends React.Component{
 	ajaxRequest('POST','/exp/save',(u)=>this.updateData(u),JSON.stringify(data));
 	this.setState({editmode:this.tablemode});
     }
-    requestTable() {
-	ajaxRequest('GET','/exp/table?from='+this.state.datefrom+'&to='+this.state.dateto,(d)=>this.processTable(d));
+    requestTable(category,shorter,dateto,datefrom,X,Y) {
+	let params='';
+	params+='?from='+(datefrom?datefrom:this.state.datefrom);
+	params+='&to='+(dateto?dateto:this.state.dateto);
+	if (category)
+	    params+='&category='+category;
+	if (shorter)
+	    params+='&short=true';
+	if (X&&Y){
+	 let topOff  = window.pageYOffset || document.documentElement.scrollTop,
+	     leftOff = window.pageXOffset || document.documentElement.scrollLeft;
+	    this.setState({tooltiposition:{left:X+leftOff,top:Y+topOff}});
+	}
+	ajaxRequest('GET','/exp/table'+params,(d)=>this.processTable(d,false,shorter));
     }
     requestStat(stattype) {
 	ajaxRequest('GET','/exp/stat?'+'agg='+stattype+'&from='+this.state.datefrom+'&to='+this.state.dateto,(d)=>this.processTable(d,'stat'));
     }
     
-    processTable(responseText, stat) {
+    processTable(responseText, stat, helper) {
 	let resp = JSON.parse(responseText);
 	if (resp['error'])
 	    this.setState({message:resp['error']})
-	else
-	    this.setState(stat?{stat:resp,editmode:this.statmode}:{data:resp,editmode:this.tablemode});
-
+	else{
+	    if (helper)
+		this.setState({tooltip:resp});
+	    else
+		this.setState(stat?{stat:resp,editmode:this.statmode}:{data:resp,editmode:this.tablemode});
+	}
     }
 
     handleDateChange(event){
@@ -501,9 +538,12 @@ class Area extends React.Component{
 	/*TODO: create processing for statistics*/
 	if (this.state.editmode==this.statmode){
 	    workarea=React.createElement('div',{className:"col-lg-9 col-md-9 col-sm-12"},
-					 React.createElement(StatView, { data:this.state.stat, name: 'stat', charts:this.state.charts }));
+					 React.createElement(StatView, { data:this.state.stat, name: 'stat', charts:this.state.charts, requestfun:(a,b,c,d,e,f)=>this.requestTable(a,b,c,d,e,f) }));
 	}
-	return (React.createElement('div',{className:"row"},controls,workarea,status));
+	let tooltip=null;
+	if (this.state.tooltip)
+	    tooltip=React.createElement(Tooltip,{data:this.state.tooltip, style:this.state.tooltiposition, close:()=>{this.setState({tooltip:null});}});
+	return (React.createElement('div',{className:"row"},controls,workarea,status,tooltip));
     }
 }
 

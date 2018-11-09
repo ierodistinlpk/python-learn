@@ -11,6 +11,11 @@ class ExpenceSerializer(serializers.ModelSerializer):
         model = Expence
         exclude = ('logtime','user_id')
 
+class ExpenceShortSerializer(ExpenceSerializer):
+    class Meta:
+        model = Expence
+        exclude=('is_approx','is_expence','location','logtime','user_id','category')
+
 class ExpenceDateSerializer(serializers.Serializer):
     summ=serializers.FloatField()
     exptime=serializers.DateField()
