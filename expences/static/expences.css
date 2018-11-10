@@ -6,3 +6,9 @@
 .tltip p:hover{
     color:red;
 }
+
+.quickbutton{
+    width:40pt;
+    height:40pt;
+    padding:5px;
+}

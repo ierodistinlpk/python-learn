@@ -5,7 +5,7 @@ from expences.models import Expuser, Expence, Location, Currency,Category
 from expences.serializers import UserSettingsSerializer, ExpenceSerializer, ExpenceShortSerializer, ExpenceDateSerializer, ExpenceCatDateSerializer 
 from django.dispatch import receiver
 from django.db.models.signals import post_save
-from django.db.models import Sum, FloatField
+from django.db.models import Sum, FloatField, Count
 from django.contrib.auth.models import User
 import json
 from datetime import datetime, timedelta
@@ -27,7 +27,8 @@ def init(request):
         return HttpResponse(json.dumps({'error':'no user id found'}),content_type="application/json")
     settings= UserSettingsSerializer(Expuser.objects.filter(id=id).first())
     fields=list(map(lambda f : f, ExpenceSerializer().fields))
-    response={'settings':settings.data, 'lists':[{'name':'currency','values':list(Currency.objects.all().values_list('name',flat=True))}, {'name':'location', 'values':list(Location.objects.all().values_list('name',flat=True))},{'name':'category', 'values':list(Category.objects.all().values_list('name',flat=True))}], 'fields':fields }
+    quick_cats=list(map(lambda c: c['category'], Expence.objects.filter(user_id=id).values('category').annotate(cat_count=Count('category')).order_by('-cat_count').values('category')[:6]))
+    response={'settings':settings.data, 'lists':[{'name':'currency','values':list(Currency.objects.all().values_list('name',flat=True))}, {'name':'location', 'values':list(Location.objects.all().values_list('name',flat=True))},{'name':'category', 'values':list(Category.objects.all().values_list('name',flat=True))}], 'fields':fields, 'quick_cats':quick_cats}
     return HttpResponse(json.dumps(response),content_type="application/json")
 
 def save(request):
