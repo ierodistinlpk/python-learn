@@ -12,7 +12,7 @@ function loadHandler(respdata,textStatus,jqXHR){
     let data=JSON.parse(respdata);
     let dateto=formatDate(new Date());
     let datefrom=formatDate(new Date(Date.now()-86400000));
-    let area=ReactDOM.render(React.createElement(Area, { data:null,lists:data.lists,settings:data.settings,fields:data.fields, dateto:dateto, datefrom:datefrom, name: 'Expences', charts:true }),document.getElementById('area'));
+    let area=ReactDOM.render(React.createElement(Area, { data:null,lists:data.lists,settings:data.settings,fields:data.fields, dateto:dateto, datefrom:datefrom, name: 'Expences', charts:true, quick_cats:data.quick_cats }),document.getElementById('area'));
     area.requestTable();
 }
 
@@ -84,13 +84,21 @@ class EditForm extends React.Component{
         }
 	let save= React.createElement('input',{name:'save', type:'submit',value:'save'});
 	let cancel= React.createElement('input',{name:'cancel', type:'button', onClick:()=>this.props.cancelClick(),value:'close'});
-	let quickbar=[]
 	let quick_cats=this.props.quick_cats;
-	//for (let i=0;i<quick_cats.length;i++)
-	//    quickbar.push(React.createElement('input',{type:'image', className='quickbutton', background:'static/img/'+quick_cats[i], onClick:()=>{this.setState(category:quick_cats[i])}, alt=quick_cats[i]}));
+	let quickbar=[];
+	if (quick_cats){
+	    for (let i=0;i<quick_cats.length;i++){
+		quickbar.push(React.createElement('input',{type:'image', key:quick_cats[i],
+							   className:'quickbutton',
+							   src:'/static/img/'+quick_cats[i].replace('/','_')+'.png',
+							   onClick:(event)=>{this.setState({category:quick_cats[i]});event.preventDefault();},
+							   alt:quick_cats[i]
+							  }));
+	    }
+	}
 	return React.createElement('form',{id:'editform',name:'editform',onSubmit:(e)=>this.handleSubmit(e)},
-				   React.createElement('table',{},React.createElement('tbody',{},res)),
 				   quickbar,
+				   React.createElement('table',{},React.createElement('tbody',{},res)),
 				   save,cancel);
     }
 }
@@ -256,7 +264,7 @@ class VBarChart extends React.Component{
 		{
 		    "name": "color",
 		    "type": "ordinal",
-		    "range": "category",
+		    "range": {"scheme": "category20"},
 		    "domain": {"data": "table", "field": "cat"}
 		}
 	    ],
@@ -515,6 +523,7 @@ class Area extends React.Component{
 	if (this.state.editmode==this.newrecord){
 	    workarea=React.createElement('div', {className:"col-lg-9 col-md-9 col-sm-12"},
 					 React.createElement(EditForm,{data:null,
+								       quick_cats:this.state.quick_cats,
 								       settings:this.state.settings,
 								       lists:this.state.lists,
 								       fields:this.state.fields,
