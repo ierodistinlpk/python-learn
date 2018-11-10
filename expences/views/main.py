@@ -76,7 +76,7 @@ def table(request):
     category=request.GET.get('category',None)
     try:
         user_id=request.session.get('_auth_user_id')
-        objects=Expence.objects.filter(exptime__gte = starttime,exptime__lte=endtime, user_id=user_id)
+        objects=Expence.objects.filter(exptime__gte = starttime,exptime__lte=endtime, user_id=user_id).order_by('exptime')
         if category:
             print ('using cat')
             objects=objects.filter(category=category)

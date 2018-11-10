@@ -210,7 +210,7 @@ class VBarChart extends React.Component{
 	    logLevel: vega.Warn,
 	    renderer: 'canvas'
 	}).initialize('#chartContainerb'+this.props.curr).hover().run();
-	view.addEventListener('click', (event,value)=>{this.props.requestfun(value.datum.cat, true, value.datum.day, value.datum.day, event.clientX, event.clientY)});
+	view.addEventListener('click', (event,value)=>{if(value)this.props.requestfun(value.datum.cat, true, value.datum.day, value.datum.day, event.clientX, event.clientY)});
     }
     componentDidUpdate() {
 	const spec = this._spec();
@@ -218,7 +218,7 @@ class VBarChart extends React.Component{
 	    logLevel: vega.Warn,
 	    renderer: 'canvas'
 	}).initialize('#chartContainerb'+this.props.curr).hover().run();
-    	view.addEventListener('click', (event,value)=>this.props.requestfun(value.datum.cat, true, value.datum.day, value.datum.day, event.clientX, event.clientY));
+    	view.addEventListener('click', (event,value)=>{if(value)this.props.requestfun(value.datum.cat, true, value.datum.day, value.datum.day, event.clientX, event.clientY)});
     }    
     // dummy render method that creates the container vega draws inside
     render() {
@@ -310,7 +310,7 @@ class PieChart extends React.Component{
 	    logLevel: vega.Warn,
 	    renderer: 'canvas'
 	}).initialize('#chartContainer'+this.props.curr).hover().run();
-	view.addEventListener('click', (event,value)=>{console.log(event);this.props.requestfun(value.datum.cat, true,null,null, event.clientX, event.clientY)});
+	view.addEventListener('click', (event,value)=>{if(value)this.props.requestfun(value.datum.cat, true,null,null, event.clientX, event.clientY)});
     }    
     componentDidUpdate() {
 	const spec = this._spec();
@@ -318,7 +318,7 @@ class PieChart extends React.Component{
 	    logLevel: vega.Warn,
 	    renderer: 'canvas'
 	}).initialize('#chartContainer'+this.props.curr).hover().run();
-	view.addEventListener('click', (event,value)=>this.props.requestfun(value.datum.cat, true, null,null, event.clientX, event.clientY));
+	view.addEventListener('click', (event,value)=>{if(value)this.props.requestfun(value.datum.cat, true, null,null, event.clientX, event.clientY)});
 
     }
     render() {
@@ -416,7 +416,7 @@ class Tooltip extends React.Component{
     render(){
 	let closebtn=React.createElement('p',{onClick:()=>this.props.close(), className:"font-weight-bold float-right"},'X');
 	let table=React.createElement(TableView,{data:this.props.data, name: 'helpertable', readonly:true});
-	console.log(this.state.styles);
+	//console.log(this.state.styles);
 	let bootstrap='position-absolute border border-dark bg-light rounded p-2'
 	return React.createElement('div',{className:'tltip '+bootstrap, style:this.state.styles},closebtn,table);
     }
