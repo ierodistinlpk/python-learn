@@ -31,7 +31,8 @@ def init(request):
     return HttpResponse(json.dumps(response),content_type="application/json")
 
 def save(request):
-#    try:
+    try:
+        user_id=request.session.get('_auth_user_id')
         body = json.loads(request.body.decode('utf-8'))
         id=body.pop('id',None)
         #print ('id is'+id)
@@ -51,13 +52,15 @@ def save(request):
             if updated!=1:
                 return HttpResponse(json.dumps({'error':'updating error'}))
         return HttpResponse(json.dumps({'saved':ExpenceSerializer(Expence.objects.filter(id=id),many=True).data}))
-#    except:
-#        return HttpResponse(json.dumps({'error':'internal error'}))
+    except:
+        return HttpResponse(json.dumps({'error':'internal error'}))
+
 def delete(request):
     try:
+        user_id=request.session.get('_auth_user_id')
         body = json.loads(request.body.decode('utf-8'))
         if body['id']:
-            exp=Expence.objects.get(id=body['id'])
+            exp=Expence.objects.get(id=body['id'], user_id=user_id)
             exp.delete()
             return HttpResponse(json.dumps({'deleted':body['id']}))
         else:
@@ -70,28 +73,30 @@ def table(request):
     endtime=request.GET.get('to',datetime.now())
     shorter=request.GET.get('short',False)
     category=request.GET.get('category',None)
-    #try:
-    objects=Expence.objects.filter(exptime__gte = starttime,exptime__lte=endtime)
-    if category:
-        print ('using cat')
-        objects=objects.filter(category=category)
-    if shorter:
-        print ('using short')
-        response=ExpenceShortSerializer(objects,many=True).data
-        print (response)
-    else:
-        response=ExpenceSerializer(objects,many=True).data
-    return HttpResponse(json.dumps(response),content_type="application/json")
-    #except:
-    #   return HttpResponse(json.dumps({'error':'internal error'}))
+    try:
+        user_id=request.session.get('_auth_user_id')
+        objects=Expence.objects.filter(exptime__gte = starttime,exptime__lte=endtime, user_id=user_id)
+        if category:
+            print ('using cat')
+            objects=objects.filter(category=category)
+        if shorter:
+            print ('using short')
+            response=ExpenceShortSerializer(objects,many=True).data
+            print (response)
+        else:
+            response=ExpenceSerializer(objects,many=True).data
+        return HttpResponse(json.dumps(response),content_type="application/json")
+    except:
+       return HttpResponse(json.dumps({'error':'internal error'}))
 
 def aggr(request):
     starttime=request.GET.get('from',datetime.now()-timedelta(30))
     endtime=request.GET.get('to',datetime.now())
     aggtype=request.GET.get('agg','catdate')
     try:
+        user_id=request.session.get('_auth_user_id')
         response=None
-        qs=Expence.objects.filter(exptime__gte = starttime,exptime__lte=endtime).order_by('exptime')
+        qs=Expence.objects.filter(exptime__gte = starttime,exptime__lte=endtime, user_id=user_id).order_by('exptime')
         if aggtype=='catdate':
             response=ExpenceCatDateSerializer( qs.filter(is_expence=True).values('exptime','category','currency').annotate(summ=Sum('summ', output_field=FloatField())),many=True).data
         if aggtype=='date':
