@@ -232,6 +232,7 @@ class VBarChart extends React.Component{
 	    "width": 500,
 	    "height": 200,
 	    "padding": 5,
+	    "title":{"text":"expenses by date, "+this.props.curr},
 	    "data": [
 		{
 		    "name": "table",
@@ -331,7 +332,7 @@ class PieChart extends React.Component{
 	    "width": 400,
 	    "height": 200,
 	    "autosize": "pad",
-
+	    "title":{"text":"expenses by category, "+this.props.curr},
 	    "data": [
 		{
 		    "name": "table",
