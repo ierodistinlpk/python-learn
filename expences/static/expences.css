@@ -12,3 +12,8 @@
     height:40pt;
     padding:5px;
 }
+
+.vega-bindings{
+    /*vertical-align:center;*/
+    display:inline-block;
+}

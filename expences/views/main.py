@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseRedirect
 from django.template import loader
 from expences.models import Expuser, Expence, Location, Currency,Category
-from expences.serializers import UserSettingsSerializer, ExpenceSerializer, ExpenceShortSerializer, ExpenceDateSerializer, ExpenceCatDateSerializer 
+from expences.serializers import UserSettingsSerializer, ExpenceSerializer, ExpenceShortSerializer, ExpenceDateSerializer, ExpenceCatDateSerializer, ExpenceGaugeSerializer
 from django.dispatch import receiver
 from django.db.models.signals import post_save
 from django.db.models import Sum, FloatField, Count
@@ -10,6 +10,7 @@ from django.contrib.auth.models import User
 import json
 from datetime import datetime, timedelta
 from rest_framework import serializers
+from django.db.models.functions import TruncMonth
 
 # Create your views here.
 
@@ -48,7 +49,7 @@ def save(request):
             exp.save()
             id=exp.id
             print (id)
-        else:
+        else: 
             updated=Expence.objects.filter(id=id).update(**args)
             if updated!=1:
                 return HttpResponse(json.dumps({'error':'updating error'}))
@@ -97,6 +98,12 @@ def aggr(request):
     try:
         user_id=request.session.get('_auth_user_id')
         response=None
+        resptype='bar'
+        if aggtype[:4]=='year':
+            if type(endtime)=='str':
+                starttime=datetime.strptime(endtime,'%Y-%M-%d')-timedelta(365)
+            else:
+                starttime=datetime.now()-timedelta(365)
         qs=Expence.objects.filter(exptime__gte = starttime,exptime__lte=endtime, user_id=user_id).order_by('exptime')
         if aggtype=='catdate':
             response=ExpenceCatDateSerializer( qs.filter(is_expence=True).values('exptime','category','currency').annotate(summ=Sum('summ', output_field=FloatField())),many=True).data
@@ -104,9 +111,15 @@ def aggr(request):
             response=ExpenceDateSerializer( qs.filter(is_expence=True).values('exptime','currency').annotate(summ=Sum('summ', output_field=FloatField())),many=True).data
         if aggtype=='incomedate':
             response=ExpenceCatDateSerializer( qs.filter(is_expence=False).values('exptime','category','currency').annotate(summ=Sum('summ', output_field=FloatField())),many=True).data
-        return HttpResponse(json.dumps(response),content_type="application/json")
-    except:
-       return HttpResponse(json.dumps({'error':'internal error'}))
+        if aggtype=='year_gauge':
+            resptype='gauge'
+            response=ExpenceGaugeSerializer( Expence.objects.filter(exptime__gte = starttime,exptime__lte=endtime, user_id=user_id).values('currency','is_expence').annotate(month=TruncMonth('exptime')).annotate(summ=Sum('summ', output_field=FloatField())).order_by('month'),many=True).data
+        if aggtype=='year_cats':
+            response=ExpenceCatDateSerializer( Expence.objects.filter(exptime__gte = starttime,exptime__lte=endtime, user_id=user_id).filter(is_expence=True).values('category','currency').annotate(exptime=TruncMonth('exptime')).annotate(summ=Sum('summ', output_field=FloatField())).order_by('exptime'),many=True).data
+        return HttpResponse(json.dumps({'type':resptype,'data':response}),content_type="application/json")
+    except Exception as e:
+        print(e)
+        return HttpResponse(json.dumps({'error':'internal error'}))
 
 @receiver(post_save, sender=User)
 def add_Expuser(sender, instance, created,**kwargs):

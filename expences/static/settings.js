@@ -47,14 +47,14 @@ class SettingsForm extends React.Component{
 		options.push(React.createElement('option',{key:lists[keys[i]][j]},lists[keys[i]][j]));
 	    }
 	    let field =  React.createElement('select',{name: keys[i], type:'text', value:this.state[keys[i]], onChange:this.handleChange},options)
-            res.push(React.createElement('div', { className:"col-lg-2 col-md-3 col-sm-6",name: keys[i], key: keys[i] },
+            res.push(React.createElement('div', { className:"col-lg-3 col-md-12 col-sm-12 mt-2",name: keys[i], key: keys[i] },
 					 React.createElement('p',{name: keys[i]}, keys[i]),
 					 React.createElement('p',{name: keys[i]}, field)
 					)
 		    );
         }
-	let save= React.createElement('input',{name:'save', type:'submit',value:'save'});
-	let cancel= React.createElement('input',{name:'cancel', type:'button', onClick:()=>{location.href='./';},value:'close'});
+	let save= React.createElement('input',{name:'save', type:'submit',value:'save', className:"mr-3  ml-0 m-lg-0"});
+	let cancel= React.createElement('input',{name:'cancel', type:'button', className:"m-2  m-lg-0", onClick:()=>{location.href='./';},value:'close'});
 	return React.createElement('form',{id:'editform',name:'editform',onSubmit:(e)=>this.handleSubmit(e)},
 				   React.createElement('div',{className:"row"},res),
 				   save,cancel);
@@ -92,9 +92,9 @@ class Area extends React.Component{
     }
     render() {
 	let tablebtn=React.createElement('a', { name: 'tableview', href: './'}, 'expences view');
-	let controls=React.createElement('div',{className:"col-lg-12 col-md-12 col-sm-12"},tablebtn);
-	let status = React.createElement('div',{className:"col-lg-12 col-md-12 col-sm-12"},this.state.message);
-	let settings= React.createElement('div',{className:"col-lg-11 col-md-11 col-sm-12"},React.createElement(SettingsForm,{settings:this.state.settings, lists:this.state.lists, saveClick:(form)=>{this.saveEdit(form)},cancelClick:()=>{this.cancelEdit()}}));
+	let controls=React.createElement('div',{className:"col-12 mb-3"},tablebtn);
+	let status = React.createElement('div',{className:"col-12"},this.state.message);
+	let settings= React.createElement('div',{className:"col-12"},React.createElement(SettingsForm,{settings:this.state.settings, lists:this.state.lists, saveClick:(form)=>{this.saveEdit(form)},cancelClick:()=>{this.cancelEdit()}}));
 	return (React.createElement('div',{className:"row"},controls,settings,status));
     }
 }

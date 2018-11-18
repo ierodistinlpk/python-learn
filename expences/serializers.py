@@ -23,3 +23,9 @@ class ExpenceDateSerializer(serializers.Serializer):
 
 class ExpenceCatDateSerializer(ExpenceDateSerializer):
     category=serializers.CharField()
+
+class ExpenceGaugeSerializer(serializers.Serializer):
+    summ=serializers.FloatField()
+    month=serializers.DateField()
+    currency=serializers.CharField()
+    is_expence=serializers.BooleanField()

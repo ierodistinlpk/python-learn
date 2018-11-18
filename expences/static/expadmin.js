@@ -9,7 +9,7 @@ function loadHandler(respdata,textStatus,jqXHR){
     ReactDOM.render(React.createElement(Area, { lists:data.lists, name: 'Admin' }),document.getElementById('area'));
 }
 
-function ajaxRequest(method,url,processor,params) {
+/*function ajaxRequest(method,url,processor,params) {
     var xmlhttp = new XMLHttpRequest();
     xmlhttp.onreadystatechange = function() {
         if (xmlhttp.readyState == XMLHttpRequest.DONE) {   // XMLHttpRequest.DONE == 4
@@ -34,7 +34,7 @@ function getCookie(name){
 	h[pair[0]]=pair[1];
 	return pair; });
     return h[name];
-}
+}*/
 
 class ListTableView extends React.Component{
     render() {
@@ -137,12 +137,12 @@ class Area extends React.Component{
 
 	let tablebtn=React.createElement('a', { name: 'tableview', href: './'}, 'expences view');
 	
-	let controls=React.createElement('div',{className:"col-lg-1 col-md-1 col-sm-12"},tablebtn);
-	let status = React.createElement('div',{className:"col-lg-12 col-md-12 col-sm-12"},this.state.message);
+	let controls=React.createElement('div',{className:"col-12 col-md-1"},tablebtn);
+	let status = React.createElement('div',{className:"col-12"},this.state.message);
 	let tableviews=[];
 	for (var i=0; i<this.state.lists.length;i++){
 	    var list=this.state.lists[i];
-	    tableviews.push(React.createElement('div',{key:i, className:"col-lg-3 col-md-6 col-sm-12"},React.createElement(ListTableView, { data:list, delClick:(list,id)=>this.delObj(list,id), saveClick:(list,id)=>this.saveObj(list,id) , name: list['name'], key:list['name'] })));
+	    tableviews.push(React.createElement('div',{key:i, className:"col-md-3 col-12 border-left border-right border-info"},React.createElement(ListTableView, { data:list, delClick:(list,id)=>this.delObj(list,id), saveClick:(list,id)=>this.saveObj(list,id) , name: list['name'], key:list['name'] })));
 	}
 	return (React.createElement('div',{className:"row"},controls,tableviews,status));
     }

@@ -12,7 +12,7 @@ function loadHandler(respdata,textStatus,jqXHR){
     let data=JSON.parse(respdata);
     let dateto=formatDate(new Date());
     let datefrom=formatDate(new Date(Date.now()-86400000));
-    let area=ReactDOM.render(React.createElement(Area, { data:null,lists:data.lists,settings:data.settings,fields:data.fields, dateto:dateto, datefrom:datefrom, name: 'Expences', charts:true, quick_cats:data.quick_cats }),document.getElementById('area'));
+    let area=ReactDOM.render(React.createElement(Area, { data:null,lists:data.lists,settings:data.settings,fields:data.fields, dateto:dateto, datefrom:datefrom, name: 'Expences', charts:true, quick_cats:data.quick_cats, vegaspec:makeVegaSpecs() }),document.getElementById('area'));
     area.requestTable();
 }
 
@@ -65,15 +65,15 @@ class EditForm extends React.Component{
 		for (let j=0;j<lists[fields[i]].length;j++){
 		    options.push(React.createElement('option',{key:lists[fields[i]][j]},lists[fields[i]][j]));
 		}
-		field =  React.createElement('select',{name: fields[i], type:'text', value:this.state[fields[i]], onChange:this.handleChange},options)
+		field =  React.createElement('select',{className:"m-2  m-lg-0",name: fields[i], type:'text', value:this.state[fields[i]], onChange:this.handleChange},options)
 	    }
 	    else 
 	    {
 		if (fields[i].substr(0,3)=='is_')
-		    field =  React.createElement('input',{name: fields[i], type:'checkbox', checked:this.state[fields[i]], onChange:(e)=>this.handleCheckbox(e)})
+		    field =  React.createElement('input',{className:"m-2 m-lg-0",name: fields[i], type:'checkbox', checked:this.state[fields[i]], onChange:(e)=>this.handleCheckbox(e)})
 		else{
 		    let fieldtype=(fields[i]=='exptime')?'date':'text';	
-		    field =  React.createElement('input',{name: fields[i], type:fieldtype, value:this.state[fields[i]], onChange:this.handleChange,'data-date-format':"YYYY-DD-MM"})
+		    field =  React.createElement('input',{className:"m-2 m-lg-0",name: fields[i], type:fieldtype, value:this.state[fields[i]], onChange:this.handleChange,'data-date-format':"YYYY-DD-MM"})
 		}
 	    }
             res.push(React.createElement('tr', { name: fields[i], key: fields[i] },
@@ -82,8 +82,8 @@ class EditForm extends React.Component{
 					)
 		    );
         }
-	let save= React.createElement('input',{name:'save', type:'submit',value:'save'});
-	let cancel= React.createElement('input',{name:'cancel', type:'button', onClick:()=>this.props.cancelClick(),value:'close'});
+	let save= React.createElement('input',{className:"m-2  m-lg-0",name:'save', type:'submit',value:'save'});
+	let cancel= React.createElement('input',{className:"m-2  m-lg-0",name:'cancel', type:'button', onClick:()=>this.props.cancelClick(),value:'close'});
 	let quick_cats=this.props.quick_cats;
 	let quickbar=[];
 	if (quick_cats){
@@ -149,246 +149,96 @@ function Tableline(props){
 
 function StatView(props){
     //matrix view - statistics table
-    if (!props.data.length)
-	return React.createElement('p',{},'no data to show');
+    let data=props.data.data.slice(0);
+    let type=props.data.type;
     if (!props.charts){
 	//extract all categories, associate with column numbers, uniq with filter
-	let columns = props.data.map(i=>i.category).filter((value, index, self)=>self.indexOf(value) === index);
-	let dates=props.data.map(i=>i.exptime).filter((value, index, self)=>self.indexOf(value) === index);
-	let matrix={}; //matrix to me reflected to table
-	for (let i=0;i<props.data.length;i++){
-	    let cell=props.data[i];
-	    if (!matrix[cell.exptime])
-		matrix[cell.exptime]={};
-	    if (!matrix[cell.exptime][cell.category])
-		matrix[cell.exptime][cell.category]={};
-	    matrix[cell.exptime][cell.category][cell.currency]=cell.summ;
-	}
-	//console.log(matrix);
-	let table=[]; //showing matrix
-	let totalpercol={}; //summary per column
-	for (let i=0;i<dates.length;i++){
-	    let row=[StatCell({items:dates[i],key:'date'})]; //dates
-	    let totalperline={}; //summary per day
-	    for (let j=0;j<columns.length;j++){
-		row.push(StatCell({key:'c'+j, items:matrix[dates[i]][columns[j]]}));
-		for (tots in matrix[dates[i]][columns[j]]){ 
-		    totalperline[tots]=(totalperline[tots])?totalperline[tots]+matrix[dates[i]][columns[j]][tots]:matrix[dates[i]][columns[j]][tots];
-		    totalpercol[columns[j]]=(totalpercol[columns[j]])?totalpercol[columns[j]]:{};
-		    totalpercol[columns[j]][tots]=(totalpercol[columns[j]][tots])?totalpercol[columns[j]][tots]+matrix[dates[i]][columns[j]][tots]:matrix[dates[i]][columns[j]][tots];
-		}
+	if (type=='bar'){
+	    let columns = data.map(i=>i.category).filter((value, index, self)=>self.indexOf(value) === index);
+	    let dates=data.map(i=>i.exptime).filter((value, index, self)=>self.indexOf(value) === index);
+	    let matrix={}; //matrix to me reflected to table
+	    for (let i=0;i<data.length;i++){
+		let cell=data[i];
+		if (!matrix[cell.exptime])
+		    matrix[cell.exptime]={};
+		if (!matrix[cell.exptime][cell.category])
+		    matrix[cell.exptime][cell.category]={};
+		matrix[cell.exptime][cell.category][cell.currency]=cell.summ;
 	    }
-	    row.push(StatCell({key:'ctotal'+i, items:totalperline}));
-	    table.push(React.createElement('tr',{key:'r'+i},row));
+	    //console.log(matrix);
+	    let table=[]; //showing matrix
+	    let totalpercol={}; //summary per column
+	    for (let i=0;i<dates.length;i++){
+		let row=[StatCell({items:dates[i],key:'date'})]; //dates
+		let totalperline={}; //summary per day
+		for (let j=0;j<columns.length;j++){
+		    row.push(StatCell({key:'c'+j, items:matrix[dates[i]][columns[j]]}));
+		    for (tots in matrix[dates[i]][columns[j]]){ 
+			totalperline[tots]=(totalperline[tots])?totalperline[tots]+matrix[dates[i]][columns[j]][tots]:matrix[dates[i]][columns[j]][tots];
+			totalpercol[columns[j]]=(totalpercol[columns[j]])?totalpercol[columns[j]]:{};
+			totalpercol[columns[j]][tots]=(totalpercol[columns[j]][tots])?totalpercol[columns[j]][tots]+matrix[dates[i]][columns[j]][tots]:matrix[dates[i]][columns[j]][tots];
+		    }
+		}
+		row.push(StatCell({key:'ctotal'+i, items:totalperline}));
+		table.push(React.createElement('tr',{key:'r'+i},row));	
+	    }
+	    let summcol=[StatCell({items:'Summary',key:'summary'})];
+	    for (let tc in totalpercol)
+		summcol.push(StatCell({items:totalpercol[tc],id:tc,key:tc}))
+	    table.push(React.createElement('tr',{key:'rtotal'},summcol));
+	    let thead=React.createElement('thead',{},
+					  React.createElement('tr',{},(['Date'].concat(columns)).map(x=>React.createElement('td',{key:'c'+x},x))));
+	    let tbody=React.createElement('tbody',{},table);
+	    return React.createElement('table',{},thead,tbody);
 	}
-	let summcol=[StatCell({items:'Summary',key:'summary'})];
-	for (let tc in totalpercol)
-	    summcol.push(StatCell({items:totalpercol[tc],id:tc,key:tc}))
-	table.push(React.createElement('tr',{key:'rtotal'},summcol));
-	let thead=React.createElement('thead',{},
-				      React.createElement('tr',{},(['Date'].concat(columns)).map(x=>React.createElement('td',{key:'c'+x},x))));
-	let tbody=React.createElement('tbody',{},table);
-	return React.createElement('table',{},thead,tbody);
     }
     else //diagrams
     {
 	let graphs=[];
-	let currencies = props.data.map(i=>i.currency).filter((value, index, self)=>self.indexOf(value) === index);
+	let currencies = data.map(i=>i.currency).filter((value, index, self)=>self.indexOf(value) === index);
 	for (let i=0;i<currencies.length;i++){
-	    let data=props.data.map(x=>Object.assign({},{"day":x.exptime,"summ":(x.currency==currencies[i])?x.summ:0,"cat":x.category}));
-	    graphs.push(React.createElement(VBarChart,{key:'b'+currencies[i],curr:currencies[i],data:data, requestfun:props.requestfun}));
-	    graphs.push(React.createElement(PieChart,{key:'p'+currencies[i],curr:currencies[i],data:data, requestfun:props.requestfun}));
+	    if (type=='bar'){
+		let chartdata=data.map(x=>Object.assign({},{"day":x.exptime,"summ":(x.currency==currencies[i])?x.summ:0,"cat":x.category}));
+		let barchart=(React.createElement(VegaChart,{className:"col-lg-6 col-md-12 col-sm-12", key:'b'+currencies[i],curr:currencies[i],data:chartdata, spec:props.vegaspec['bar'], type:'bar', requestfun:props.requestfun}));
+		let piechart=(React.createElement(VegaChart,{className:"col-lg-6 col-md-12 col-sm-12", key:'p'+currencies[i],curr:currencies[i],data:chartdata, spec:props.vegaspec['pie'], type:'pie', requestfun:props.requestfun}));
+		graphs.push(React.createElement('div',{key:i,className: "col-lg-12 col-md-12 col-sm-12" },barchart,piechart));
+	    }
+	    if (type=='gauge'){
+		let chartdata=data.map(x=>{return (x.currency==currencies[i])?Object.assign({},{"day":x.month,"summ":x.summ,"cat":x.is_expence?'expence':'income'}):null}).filter(x=>x!=null);
+		graphs.push(React.createElement(VegaChart,{className:"col-lg-6 col-md-12 col-sm-12", key:'g'+currencies[i],curr:currencies[i],data:chartdata, spec:props.vegaspec['gauge'], type:'gauge', requestfun:()=>false}));
+		graphs.push(React.createElement(VegaChart,{key:'p'+currencies[i],curr:currencies[i],data:chartdata, spec:props.vegaspec['pie'], type:'pie', requestfun:()=>false}));
+	    }
 	}
 	return React.createElement('div',{},graphs);
     }
 }
 
-class VBarChart extends React.Component{
+class VegaChart extends React.Component{
     componentDidMount() {
-	const spec = this._spec();
+	let title={"text":"expenses by date, "+this.props.curr};
+	const spec = this.props.spec(this.props.data.slice(0), title);//_spec;
+	console.log(this.props.curr);
+	console.log(this.props.data);
 	var view = new vega.View(vega.parse(spec), {
 	    logLevel: vega.Warn,
 	    renderer: 'canvas'
-	}).initialize('#chartContainerb'+this.props.curr).hover().run();
+	}).initialize('#chartContainer'+this.props.type+this.props.curr).hover().run();
 	view.addEventListener('click', (event,value)=>{if(value)this.props.requestfun(value.datum.cat, true, value.datum.day, value.datum.day, event.clientX, event.clientY)});
     }
     componentDidUpdate() {
-	const spec = this._spec();
+	let title={"text":"expenses by date, "+this.props.curr};
+	const spec = this.props.spec(this.props.data, title);//this._spec();
 	var view = new vega.View(vega.parse(spec), {
 	    logLevel: vega.Warn,
 	    renderer: 'canvas'
-	}).initialize('#chartContainerb'+this.props.curr).hover().run();
+	}).initialize('#chartContainer'+this.props.type+this.props.curr).hover().run();
     	view.addEventListener('click', (event,value)=>{if(value)this.props.requestfun(value.datum.cat, true, value.datum.day, value.datum.day, event.clientX, event.clientY)});
     }    
     // dummy render method that creates the container vega draws inside
     render() {
-	return React.createElement('div',{ref:'chartContainerb'+this.props.curr, id:'chartContainerb'+this.props.curr});
+	return React.createElement('div',{className:"col-lg-6 col-md-12 col-sm-12 d-inline align-top", id:'chartContainer'+this.props.type+this.props.curr},'aaa');
     }
-    // the vega spec for the chart
-    _spec() {
-	return {
-	    "$schema": "https://vega.github.io/schema/vega/v4.json",
-	    "description":"expenses by date, "+this.props.curr,
-	    "width": 500,
-	    "height": 200,
-	    "padding": 5,
-	    "title":{"text":"expenses by date, "+this.props.curr},
-	    "data": [
-		{
-		    "name": "table",
-		    "values": this.props.data,
-		    "transform": [
-			{
-			    "type": "stack",
-			    "groupby": ["day"],
-			    "sort": {"field": "cat"},
-			    "as" : ["s0","s1"],
-			    "field": "summ"
-			}
-		    ]
-		}
-	    ],
-	    "scales": [
-		{
-		    "name": "date",
-		    "type": "band",
-		    "range": "width",
-		    "domain": {"data": "table", "field": "day"}
-		},
-		{
-		    "name": "money",
-		    "type": "linear",
-		    "range": "height",
-		    "nice": true, "zero": true,
-		    "domain": {"data": "table", "field": "s1"}
-		},
-		{
-		    "name": "color",
-		    "type": "ordinal",
-		    "range": {"scheme": "category20"},
-		    "domain": {"data": "table", "field": "cat"}
-		}
-	    ],
-	    "axes": [
-		{"orient": "bottom", "scale": "date", "zindex": 1, "labelAngle":-90,"labelAlign":"right"},
-		{"orient": "left", "scale": "money", "zindex": 1, "grid":true,"tickCount": 5}
-	    ],
-
-	    "legends":[
-		{fill:"color"}
-	    ],
-	    "marks": [
-		{
-		    "type": "rect",
-		    "from": {"data": "table"},
-		    "encode": {
-			"enter": {
-			    "x": {"scale": "date", "field": "day"},
-			    "width": {"scale": "date", "band": 1, "offset": -1},
-			    "y": {"scale": "money", "field": "s0"},
-			    "y2": {"scale": "money", "field": "s1"},
-			    "fill": {"scale": "color", "field": "cat"}
-			},
-			"update": {
-			    "fillOpacity": {"value": 1}
-			},
-			"hover": {
-			    "fillOpacity": {"value": 0.5}
-			}
-		    }
-		}
-	    ],
-	};
-    }
-    
 }
-
-
-class PieChart extends React.Component{
-    componentDidMount() {
-	const spec = this._spec();
-	var view = new vega.View(vega.parse(spec), {
-	    logLevel: vega.Warn,
-	    renderer: 'canvas'
-	}).initialize('#chartContainer'+this.props.curr).hover().run();
-	view.addEventListener('click', (event,value)=>{if(value)this.props.requestfun(value.datum.cat, true,null,null, event.clientX, event.clientY)});
-    }    
-    componentDidUpdate() {
-	const spec = this._spec();
-	var view = new vega.View(vega.parse(spec), {
-	    logLevel: vega.Warn,
-	    renderer: 'canvas'
-	}).initialize('#chartContainer'+this.props.curr).hover().run();
-	view.addEventListener('click', (event,value)=>{if(value)this.props.requestfun(value.datum.cat, true, null,null, event.clientX, event.clientY)});
-
-    }
-    render() {
-	return React.createElement('div',{ref:'chartContainer'+this.props.curr, id:'chartContainer'+this.props.curr});
-    }
-    // the vega spec for the chart
-    _spec() {
-	return {
-	    "$schema": "https://vega.github.io/schema/vega/v4.json",
-	    "width": 400,
-	    "height": 200,
-	    "autosize": "pad",
-	    "title":{"text":"expenses by category, "+this.props.curr},
-	    "data": [
-		{
-		    "name": "table",
-		    "values": this.props.data,
-		    "transform": [
-			{"type":"aggregate",
-			 "groupby": ["cat"],
-			 "fields":["summ"],
-			 "ops":["sum"],
-			 "as":["sum"]
-			},
-			{
-			    "type": "pie",
-			    "field": "sum"
-			}
-		    ]
-		}
-	    ],
-	    "scales": [
-		{
-		    "name": "color",
-		    "type": "ordinal",
-		    "domain": {"data": "table", "field": "cat"},
-		    "range": {"scheme": "category20"}
-		}
-	    ],
-
-	    "legends":[
-		{fill:"color"}
-	    ],
-	    "marks": [
-		{
-		    "type": "arc",
-		    "from": {"data": "table"},
-		    "encode": {
-			"enter": {
-			    "fill": {"scale": "color", "field": "cat"},
-			    "x": {"signal": "width / 2"},
-			    "y": {"signal": "height / 2"}
-			},
-			"update": {
-			    "startAngle": {"field": "startAngle"},
-			    "endAngle": {"field": "endAngle"},
-			    "outerRadius": {"signal": "height / 2"},
-			    "fillOpacity": {"value": 1}
-			},
-			"hover": {
-			    "fillOpacity": {"value": 0.5}
-			}	   
-		    } 
-		},
-	    ]
-	}
-    };
-}
-    
 
 function StatCell(props){
     if (typeof(props.items)=='string')
@@ -503,26 +353,28 @@ class Area extends React.Component{
     }
     render() {
 	/*new record button*/
-	let formbtn=React.createElement('button', { name: 'formview', onClick:()=>{this.editObj(this.newrecord);} }, 'new');
+	let formbtn=React.createElement('button', { className:"m-2 m-lg-0", name: 'formview', onClick:()=>{this.editObj(this.newrecord);} }, 'new');
 	/*list button*/
-	let tablebtn=React.createElement('button', { name: 'tableview', onClick:()=>{this.requestTable();} }, 'table view');
+	let tablebtn=React.createElement('button', {className:"m-2  m-lg-0", name: 'tableview', onClick:()=>{this.requestTable();} }, 'table view');
 	/*Statistic buttons*/
-	let statistics={'catdate':'category & date','date':'date & currency','incomedate':'Incomes'};
+	let statistics={'catdate':'category & date','date':'date & currency','incomedate':'Incomes',
+			'year_gauge':'Year balance','year_cats':'Year by categories'};
 	let statbuttons=[];
+	statbuttons.push(React.createElement('p',{key:'title', className:'align-bottom mb-0 mt-2'},'Statistic'));
 	for (let key in statistics)
-	    statbuttons.push(React.createElement('button', { name: key, key:key, onClick:()=>{this.requestStat(key);} },statistics[key] ));
+	    statbuttons.push(React.createElement('button', { className:"m-2  m-lg-0", name: key, key:key, onClick:()=>{this.requestStat(key);} },statistics[key] ));
 	statbuttons.push(React.createElement('p',{key:'chart'},
 					     'show Charts',
 					     React.createElement('input',{type:'checkbox',name:'charts', checked:this.state.charts, onChange:(e)=>this.handleCheckbox(e)})));
 	/*date fields*/
-	let datefrom=React.createElement('input',{name: 'datefrom', type:'date', value:this.state.datefrom, onChange:(e)=>{this.handleDateChange(e);},'data-date-format':"YYYY-DD-MM"});
-	let dateto=React.createElement('input',{name: 'dateto', type:'date', value:this.state.dateto, onChange:(e)=>{this.handleDateChange(e);},'data-date-format':"YYYY-DD-MM"});
+	let datefrom=React.createElement('input',{className:"m-2  m-lg-0", name: 'datefrom', type:'date', value:this.state.datefrom, onChange:(e)=>{this.handleDateChange(e);},'data-date-format':"YYYY-DD-MM"});
+	let dateto=React.createElement('input',{className:"m-2  m-lg-0",name: 'dateto', type:'date', value:this.state.dateto, onChange:(e)=>{this.handleDateChange(e);},'data-date-format':"YYYY-DD-MM"});
 	
-	let controls=React.createElement('div',{className:"col-lg-3 col-md-3 col-sm-12"},formbtn,tablebtn,datefrom,dateto,statbuttons);
+	let controls=React.createElement('div',{className:"col-lg-3 col-md-12 col-sm-12"},formbtn,tablebtn,datefrom,dateto,statbuttons);
 	let status = React.createElement('div',{className:"col-lg-12 col-md-12 col-sm-12"},this.state.message);
 	let workarea='';
 	if (this.state.editmode==this.newrecord){
-	    workarea=React.createElement('div', {className:"col-lg-9 col-md-9 col-sm-12"},
+	    workarea=React.createElement('div', {className:"col-lg-9 col-md-12 col-sm-12"},
 					 React.createElement(EditForm,{data:null,
 								       quick_cats:this.state.quick_cats,
 								       settings:this.state.settings,
@@ -532,7 +384,7 @@ class Area extends React.Component{
 								       cancelClick:()=>{this.cancelEdit()}}));
 	}
 	if (this.state.editmode>this.newrecord){
-	    workarea=React.createElement('div',{className:"col-lg-9 col-md-9 col-sm-12"},
+	    workarea=React.createElement('div',{className:"col-lg-9 col-md-12 col-sm-12"},
 					 React.createElement(EditForm,{data:this.state.data.find((el)=>{return el.id==this.state.editmode}),
 								       lists:this.state.lists,
 								       fields:this.state.fields,
@@ -540,15 +392,15 @@ class Area extends React.Component{
 								       cancelClick:()=>{this.cancelEdit()}}));
 	}
 	if (this.state.editmode==this.tablemode){
-	    workarea=React.createElement('div',{className:"col-lg-9 col-md-9 col-sm-12"},
+	    workarea=React.createElement('div',{className:"col-lg-9 col-md-12 col-sm-12"},
 					 React.createElement(TableView, { data:this.state.data,
 									  editClick:(id)=>this.editObj(id),
 									  delClick:(id)=>this.delObj(id),  name: 'tableview' }));
 	}
 	/*TODO: create processing for statistics*/
 	if (this.state.editmode==this.statmode){
-	    workarea=React.createElement('div',{className:"col-lg-9 col-md-9 col-sm-12"},
-					 React.createElement(StatView, { data:this.state.stat, name: 'stat', charts:this.state.charts, requestfun:(a,b,c,d,e,f)=>this.requestTable(a,b,c,d,e,f) }));
+	    workarea=React.createElement('div',{className:"col-lg-9 col-md-12 col-sm-12"},
+					 React.createElement(StatView, { data:this.state.stat, name: 'stat', charts:this.state.charts, vegaspec:this.state.vegaspec, requestfun:(a,b,c,d,e,f)=>this.requestTable(a,b,c,d,e,f) }));
 	}
 	let tooltip=null;
 	if (this.state.tooltip)
@@ -558,4 +410,3 @@ class Area extends React.Component{
 }
 
 
-    
