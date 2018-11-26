@@ -12,7 +12,8 @@ function loadHandler(respdata,textStatus,jqXHR){
     let data=JSON.parse(respdata);
     let dateto=formatDate(new Date());
     let datefrom=formatDate(new Date(Date.now()-86400000));
-    let area=ReactDOM.render(React.createElement(Area, { data:null,lists:data.lists,settings:data.settings,fields:data.fields, dateto:dateto, datefrom:datefrom, name: 'Expences', charts:true, quick_cats:data.quick_cats, vegaspec:makeVegaSpecs() }),document.getElementById('area'));
+    let area=ReactDOM.render(React.createElement(Area, { data:null, stat:null, lists:data.lists,settings:data.settings,fields:data.fields, dateto:dateto, datefrom:datefrom, name: 'Expences', charts:true, table:true, quick_cats:data.quick_cats, vegaspec:makeVegaSpecs() }),document.getElementById('area'));
+    area.requestStat();
     area.requestTable();
 }
 
@@ -90,7 +91,7 @@ class EditForm extends React.Component{
 	    for (let i=0;i<quick_cats.length;i++){
 		quickbar.push(React.createElement('input',{type:'image', key:quick_cats[i],
 							   className:'quickbutton',
-							   src:'/static/img/'+quick_cats[i].replace('/','_')+'.png',
+							   src:window.location.pathname+'static/img/'+quick_cats[i].replace('/','_')+'.png',
 							   onClick:(event)=>{this.setState({category:quick_cats[i]});event.preventDefault();},
 							   alt:quick_cats[i]
 							  }));
@@ -215,25 +216,20 @@ function StatView(props){
 
 class VegaChart extends React.Component{
     componentDidMount() {
-	let title={"text":"expenses by date, "+this.props.curr};
-	const spec = this.props.spec(this.props.data.slice(0), title);//_spec;
-	console.log(this.props.curr);
-	console.log(this.props.data);
-	var view = new vega.View(vega.parse(spec), {
-	    logLevel: vega.Warn,
-	    renderer: 'canvas'
-	}).initialize('#chartContainer'+this.props.type+this.props.curr).hover().run();
-	view.addEventListener('click', (event,value)=>{if(value)this.props.requestfun(value.datum.cat, true, value.datum.day, value.datum.day, event.clientX, event.clientY)});
+	this.drawVega();
     }
     componentDidUpdate() {
+	this.drawVega();
+    }
+    drawVega(){
 	let title={"text":"expenses by date, "+this.props.curr};
-	const spec = this.props.spec(this.props.data, title);//this._spec();
+	const spec = this.props.spec(this.props.data, title);
 	var view = new vega.View(vega.parse(spec), {
 	    logLevel: vega.Warn,
-	    renderer: 'canvas'
+	    renderer: 'svg'
 	}).initialize('#chartContainer'+this.props.type+this.props.curr).hover().run();
     	view.addEventListener('click', (event,value)=>{if(value)this.props.requestfun(value.datum.cat, true, value.datum.day, value.datum.day, event.clientX, event.clientY)});
-    }    
+    }
     // dummy render method that creates the container vega draws inside
     render() {
 	return React.createElement('div',{className:"col-lg-6 col-md-12 col-sm-12 d-inline align-top", id:'chartContainer'+this.props.type+this.props.curr},'aaa');
@@ -260,7 +256,6 @@ class Tooltip extends React.Component{
     componentDidMount() {
 	this.setState({styles:this.props.style});
     }
-
     componentWillReceiveProps(nextProps){
 	this.setState({styles:nextProps.style});
     }
@@ -272,6 +267,7 @@ class Tooltip extends React.Component{
 	return React.createElement('div',{className:'tltip '+bootstrap, style:this.state.styles},closebtn,table);
     }
 }
+
 class Area extends React.Component{ 
     constructor(props){
 	super(props);
@@ -330,7 +326,13 @@ class Area extends React.Component{
 	ajaxRequest('GET','/exp/table'+params,(d)=>this.processTable(d,false,shorter));
     }
     requestStat(stattype) {
-	ajaxRequest('GET','/exp/stat?'+'agg='+stattype+'&from='+this.state.datefrom+'&to='+this.state.dateto,(d)=>this.processTable(d,'stat'));
+	let datefrom=this.state.datefrom;
+	if (!stattype){
+	    stattype='catdate';
+	    let d=new Date();
+	    datefrom=d.getFullYear()+'-'+('00'+(d.getMonth())).slice(-2)+'-'+('00'+d.getDate()).slice(-2);
+	}
+	ajaxRequest('GET','/exp/stat?'+'agg='+stattype+'&from='+datefrom+'&to='+this.state.dateto,(d)=>this.processTable(d,'stat'));
     }
     
     processTable(responseText, stat, helper) {
@@ -341,7 +343,7 @@ class Area extends React.Component{
 	    if (helper)
 		this.setState({tooltip:resp});
 	    else
-		this.setState(stat?{stat:resp,editmode:this.statmode}:{data:resp,editmode:this.tablemode});
+		this.setState(stat?{stat:resp}:{data:resp});
 	}
     }
 
@@ -355,24 +357,29 @@ class Area extends React.Component{
 	/*new record button*/
 	let formbtn=React.createElement('button', { className:"m-2 m-lg-0", name: 'formview', onClick:()=>{this.editObj(this.newrecord);} }, 'new');
 	/*list button*/
-	let tablebtn=React.createElement('button', {className:"m-2  m-lg-0", name: 'tableview', onClick:()=>{this.requestTable();} }, 'table view');
+	let tablebtn=React.createElement('button', {className:"m-2  m-lg-0", name: 'tableview', onClick:()=>{this.requestTable();} }, 'request data');
 	/*Statistic buttons*/
+	let statbuttons=[];
+	//display parameters flags
+	statbuttons.push(React.createElement('p',{key:'chart', className:"m-2  m-lg-0"},
+					     'show Charts',
+					     React.createElement('input',{type:'checkbox',name:'charts', checked:this.state.charts, onChange:(e)=>this.handleCheckbox(e)})));
+	statbuttons.push(React.createElement('p',{key:'table', className:"m-2  m-lg-0"},
+					     'show table',
+					     React.createElement('input',{type:'checkbox',name:'table', checked:this.state.table, onChange:(e)=>this.handleCheckbox(e)})));
+	//the entrie buttons
 	let statistics={'catdate':'category & date','date':'date & currency','incomedate':'Incomes',
 			'year_gauge':'Year balance','year_cats':'Year by categories'};
-	let statbuttons=[];
 	statbuttons.push(React.createElement('p',{key:'title', className:'align-bottom mb-0 mt-2'},'Statistic'));
 	for (let key in statistics)
 	    statbuttons.push(React.createElement('button', { className:"m-2  m-lg-0", name: key, key:key, onClick:()=>{this.requestStat(key);} },statistics[key] ));
-	statbuttons.push(React.createElement('p',{key:'chart'},
-					     'show Charts',
-					     React.createElement('input',{type:'checkbox',name:'charts', checked:this.state.charts, onChange:(e)=>this.handleCheckbox(e)})));
 	/*date fields*/
 	let datefrom=React.createElement('input',{className:"m-2  m-lg-0", name: 'datefrom', type:'date', value:this.state.datefrom, onChange:(e)=>{this.handleDateChange(e);},'data-date-format':"YYYY-DD-MM"});
 	let dateto=React.createElement('input',{className:"m-2  m-lg-0",name: 'dateto', type:'date', value:this.state.dateto, onChange:(e)=>{this.handleDateChange(e);},'data-date-format':"YYYY-DD-MM"});
 	
 	let controls=React.createElement('div',{className:"col-lg-3 col-md-12 col-sm-12"},formbtn,tablebtn,datefrom,dateto,statbuttons);
 	let status = React.createElement('div',{className:"col-lg-12 col-md-12 col-sm-12"},this.state.message);
-	let workarea='';
+	let workarea=React.createElement('div', {className:"col-lg-9 col-md-12 col-sm-12"});
 	if (this.state.editmode==this.newrecord){
 	    workarea=React.createElement('div', {className:"col-lg-9 col-md-12 col-sm-12"},
 					 React.createElement(EditForm,{data:null,
@@ -392,20 +399,21 @@ class Area extends React.Component{
 								       cancelClick:()=>{this.cancelEdit()}}));
 	}
 	if (this.state.editmode==this.tablemode){
-	    workarea=React.createElement('div',{className:"col-lg-9 col-md-12 col-sm-12"},
+	    workarea=React.createElement('div',{className:"col-lg-9 col-md-12 col-sm-12 my-3 py-1 border border-info"},
 					 React.createElement(TableView, { data:this.state.data,
 									  editClick:(id)=>this.editObj(id),
 									  delClick:(id)=>this.delObj(id),  name: 'tableview' }));
 	}
-	/*TODO: create processing for statistics*/
-	if (this.state.editmode==this.statmode){
-	    workarea=React.createElement('div',{className:"col-lg-9 col-md-12 col-sm-12"},
-					 React.createElement(StatView, { data:this.state.stat, name: 'stat', charts:this.state.charts, vegaspec:this.state.vegaspec, requestfun:(a,b,c,d,e,f)=>this.requestTable(a,b,c,d,e,f) }));
+	/* statistics*/
+	let statarea=null
+	if (this.state.stat){
+	    statarea=React.createElement('div',{className:"col-lg-12 col-md-12 col-sm-12 my-3 border border-info"},
+					     React.createElement(StatView, { data:this.state.stat, name: 'stat', charts:this.state.charts, vegaspec:this.state.vegaspec, requestfun:(a,b,c,d,e,f)=>this.requestTable(a,b,c,d,e,f) }));
 	}
 	let tooltip=null;
 	if (this.state.tooltip)
 	    tooltip=React.createElement(Tooltip,{data:this.state.tooltip, style:this.state.tooltiposition, close:()=>{this.setState({tooltip:null});}});
-	return (React.createElement('div',{className:"row"},controls,workarea,status,tooltip));
+	return (React.createElement('div',{className:"row"},controls,workarea,statarea, status,tooltip));
     }
 }
 
