@@ -92,8 +92,8 @@ def table(request):
        return HttpResponse(json.dumps({'error':'internal error'}))
 
 def aggr(request):
-    starttime=request.GET.get('from',datetime.now()-timedelta(30))
-    endtime=request.GET.get('to',datetime.now())
+    endtime=request.GET.get('to',datetime.strftime(datetime.now(),'%Y-%m-%d'))
+    starttime=request.GET.get('from',datetime.strptime(endtime,'%Y-%m-%d')-timedelta(30))
     aggtype=request.GET.get('agg','catdate')
     try:
         user_id=request.session.get('_auth_user_id')

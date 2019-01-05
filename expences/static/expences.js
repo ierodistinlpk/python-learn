@@ -326,13 +326,11 @@ class Area extends React.Component{
 	ajaxRequest('GET','/exp/table'+params,(d)=>this.processTable(d,false,shorter));
     }
     requestStat(stattype) {
-	let datefrom=this.state.datefrom;
+	let request='/exp/stat?'+'agg='+stattype+'&from='+this.state.datefrom+'&to='+this.state.dateto;
 	if (!stattype){
-	    stattype='catdate';
-	    let d=new Date();
-	    datefrom=d.getFullYear()+'-'+('00'+(d.getMonth())).slice(-2)+'-'+('00'+d.getDate()).slice(-2);
+	    request='/exp/stat'
 	}
-	ajaxRequest('GET','/exp/stat?'+'agg='+stattype+'&from='+datefrom+'&to='+this.state.dateto,(d)=>this.processTable(d,'stat'));
+	ajaxRequest('GET',request,(d)=>this.processTable(d,'stat'));
     }
     
     processTable(responseText, stat, helper) {
