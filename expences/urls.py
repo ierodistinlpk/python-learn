@@ -23,8 +23,9 @@ urlpatterns = [
     #REST v1 API
     path('rest/v1/expences', rest.expences, name='expences objects'),
     path('rest/v1/expences/<int:exp_id>', rest.expences, name='expences objects'),
-#    path('rest/v1/stat', rest.stat, name='statistical data'),
+    path('rest/v1/listed', rest.listed, name='listed category objects'),
     path('rest/v1/listed/<str:key>', rest.listed, name='listed category objects'),
-#    path('rest/v1/usersettings', rest.settings, name='user profile settings'),
-    
+    path('rest/v1/listed/<str:key>/<str:val>', rest.listed, name='listed category objects'),
+    path('rest/v1/usersettings', rest.settings, name='user profile settings'),
+    #path('rest/v1/stat', rest.stat, name='statistical data'),
 ]

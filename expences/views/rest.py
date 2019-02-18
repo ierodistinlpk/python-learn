@@ -2,11 +2,11 @@ from django.http import JsonResponse, HttpResponse
 from django.template import loader
 from expences.models import Expuser, Expence, Location, Currency,Category
 from expences.serializers import UserSettingsSerializer, ExpenceSerializer, ExpenceShortSerializer, ExpenceDateSerializer, ExpenceCatDateSerializer, ExpenceGaugeSerializer
-from django.dispatch import receiver
-from django.db.models.signals import post_save
-from django.db.models import Sum, FloatField, Count
+#from django.dispatch import receiver
+#from django.db.models.signals import post_save
+#from django.db.models import Sum, FloatField, Count
 from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 import json, logging,sys
 from datetime import datetime, timedelta
 from django.db.models.functions import TruncMonth
@@ -72,7 +72,7 @@ def expences(request, exp_id=None):
                 return JsonResponse({'error':'updating error'}, status=500)
         #delete object
         elif request.method=='DELETE': 
-            if exp_id:
+            if exp_id or exp_id==0:
                 try:
                     exp=Expence.objects.get(id=exp_id, user_id=user_id)
                     exp.delete()
@@ -89,45 +89,101 @@ def expences(request, exp_id=None):
         return JsonResponse({'error':'auth required'}, status=401)
 
 ## for categories,currencies and locations
-def listed(request,key,val=None):
+def listed(request,key=None,val=None):
     __doc__ = """Represents entities entities such as Locations, Categoties, Currencies and its operations.
     Supported operations are get, add and delete. 
-    Editing of existing objects are not supported and throws status 500"""
+    Editing of existing objects are not supported but saving just reflects item to itself"""
     orm={'currency':Currency,'category':Category, 'location':Location}
     user_id=authenticated_user(request)
     if user_id:
         try:
             #get list matched
             if request.method=='GET':
-                response=list(orm[key].objects.all().values_list('name',flat=True))
+                if not key:
+                    return JsonResponse(list(orm.keys()),safe=False)
+                if key not in orm.keys():
+                    return JsonResponse({'error':'list "{0}" not found'.format(key)}, status=404) 
+                if val:
+                    lst=list(orm[key].objects.filter(name=val).values_list('name',flat=True))
+                    response=lst[0] if len(lst) else None
+                else:    
+                    response=list(orm[key].objects.all().values_list('name',flat=True))
                 return JsonResponse(response,safe=False)
             #create/update object
             elif request.method=='POST':
+                if (not key) or (key not in orm.keys()):
+                    return JsonResponse({'error':'resource not found'}, status=404)
                 body = json.loads(request.body.decode('utf-8'))
-                c=orm[key](name=body[key])
+                name=val or body['name']
+                if not name:
+                    return JsonResponse({'error':'missing parameter'}, status=400)
+                c,is_created=orm[key].objects.get_or_create(name=name)
                 c.save()
-                return JsonResponse({key:body[key]})
+                return JsonResponse({key:name})
             #delete object
             elif request.method=='DELETE':
-                body = json.loads(request.body.decode('utf-8'))
-                #key = list(body.keys())[0]
-                c=orm[key].objects.get(name=body[key])
-                c.delete()
-                return JsonResponse({key:body[key]})
+                if (not key) or (key not in orm.keys()) or (not val):
+                    return JsonResponse({'error':'request not supported'}, status=405)
+                try:
+                    c=orm[key].objects.get(name=val)
+                    c.delete()
+                    return JsonResponse({key:val})
+                except:
+                    return JsonResponse({'error':'resource not found'}, status=404)
             #any bad requests
             else:
-                return Response('request not supported', status=405)
+                return JsonResponse({'error':'request not supported'}, status=405)
         except Exception as e:
-            logging.error(e)    
+            logging.error(e)        
             return JsonResponse({'error':'internal error'},status=500)
     else:
         return JsonResponse({'error':'auth required'}, status=401)
 
-    #path('rest/v1/usersettings', rest.settings, name='user profile settings'),
-
-
-     #   path('rest/v1/stat', rest.stat, name='statistical data'),
-
+def settings(request):
+    __doc__=""" represents user settings such as default values and so on.
+    Deletion is not supported."""
+    user_id=authenticated_user(request)
+    if user_id:
+        if request.method=='GET':
+            settings=UserSettingsSerializer(Expuser.objects.filter(id=user_id).first()).data
+            return JsonResponse(settings)
+        if request.method=='POST':
+            try:
+                body = json.loads(request.body.decode('utf-8'))
+                user=Expuser.objects.get(id=user_id)
+                user.category=Category.objects.get(name=body['category'])
+                user.currency=Currency.objects.get(name=body['currency'])
+                user.location=Location.objects.get(name=body['location'])
+                user.save()
+                return JsonResponse({'succes':'saved'})
+            except ObjectDoesNotExist:
+                return JsonResponse({'error':'missing or bad parameter'}, status=400)
+            except Exception as e:
+                logging.error(e)    
+                return JsonResponse({'error':'internal error'},status=500)
+        else:
+            return JsonResponse({'error':'request not supported'}, status=405)
+    else:
+        return JsonResponse({'error':'auth required'}, status=401)
 
 def authenticated_user(request):
     return request.session.get('_auth_user_id')
+
+def chart_template(request):
+    __doc__="""Returns JSON Vega Chart structure by name"""
+    if request.method=='GET':
+        fname=requests.GET.get('name',None)
+        try:
+            with open(fname+'.json') as f:
+                return JsonResponse(json.dumps(json.load(f)))
+        except IOError as e:
+            return JsonResponse({'error':'not found'}, status=404)
+        except json.JSONDecodeError as e:
+            logging.error('Json error: %s: %s',e.doc, e.msg)                
+            return JsonResponse({'error':'bad data'}, status=500)
+        except Exception as e:
+            logging.error('%s: %s',e.__class__, e)                
+            return JsonResponse({'error':'internal error'}, status=500)
+        
+    else:
+        return JsonResponse({'error':'request not supported'}, status=405)
