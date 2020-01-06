@@ -1,0 +1,43 @@
+{"$schema": "https://vega.github.io/schema/vega/v4.json",
+ "width": 400,
+ "height": 200,
+ "autosize": "fit",
+ "data": [{"name": "table"}],
+ scales: [{name: "date", type: "point", range: "width", domain: {data: "table", field: "day"}},
+	  {name: "money", type: "linear",range: "height",nice: true, zero: true,domain: {"data": "table", "field": "summ"}},
+	  {name: "color", type: "ordinal", range: {scheme: "category20"}, domain: {data: "table", field: "cat"}}
+	 ],
+ axes:baraxes.slice(0),
+ "legends":[{fill:"color"}],
+ "marks": [
+     {"type": "group",
+      "from": {
+	  "facet": {
+	      "name": "series",
+	      "data": "table",
+	      "groupby": "cat"
+	  }
+      },
+      "marks": [{"type": "line",
+		 "from": {"data": "series"},
+		 "encode": {
+		     "enter": {
+			 "x": {"scale": "date", "field": "day"},
+			 "y": {"scale": "money", "field": "summ"},
+			 "stroke": {"scale": "color", "field": "cat"},
+			 "strokeWidth": {"value": 2},
+			 //"interpolate":{"value": "natural"}
+			 //"interpolate":{"value": "step"}
+		     },
+		     "update": {
+			 "fillOpacity": {"value": 1}
+		     },
+		     "hover": {
+			 "fillOpacity": {"value": 0.5}
+		     }
+		 }
+		}
+	       ]
+     }
+ ]
+}

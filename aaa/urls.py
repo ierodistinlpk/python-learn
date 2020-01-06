@@ -9,4 +9,5 @@ urlpatterns = [
     path('save',views.save, name='save'),
     path('delete/<int:userid>',views.delete, name='delete'),
     path('register/', views.SignUp.as_view(), name='register'),
+    path('confirmuser', views.confirmUser, name='confirmuser'),    
 ]

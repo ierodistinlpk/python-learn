@@ -27,6 +27,11 @@ function getCookie(name){
     return h[name];
 }
 
+function formatDate(d){
+    return d.getFullYear()+'-'+('00'+(d.getMonth()+1)).slice(-2)+'-'+('00'+d.getDate()).slice(-2);
+}
+
+//My VegaChart-with-interaction lib
 function makeVegaSpecs(){
     let barbase={"$schema": "https://vega.github.io/schema/vega/v4.json",
 		 "width": 400,
@@ -184,5 +189,3 @@ function makeVegaSpec(base,axes,scales,marks,datatransform){
 	return ret;
     }
 }
-
-

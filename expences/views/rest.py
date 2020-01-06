@@ -2,9 +2,6 @@ from django.http import JsonResponse, HttpResponse
 from django.template import loader
 from expences.models import Expuser, Expence, Location, Currency,Category
 from expences.serializers import UserSettingsSerializer, ExpenceSerializer, ExpenceShortSerializer, ExpenceDateSerializer, ExpenceCatDateSerializer, ExpenceGaugeSerializer
-#from django.dispatch import receiver
-#from django.db.models.signals import post_save
-#from django.db.models import Sum, FloatField, Count
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 import json, logging,sys
@@ -169,13 +166,17 @@ def settings(request):
 def authenticated_user(request):
     return request.session.get('_auth_user_id')
 
-def chart_template(request):
+def chart(request):
     __doc__="""Returns JSON Vega Chart structure by name"""
     if request.method=='GET':
-        fname=requests.GET.get('name',None)
+        vegaspec=None
+        fname=requests.GET.get('chart_type',None)
         try:
             with open(fname+'.json') as f:
-                return JsonResponse(json.dumps(json.load(f)))
+                vegaspec=json.load(f)
+            vegadata=agg(request)
+            vegaspec['data']['values']=vegadata
+            return JsonResponse(vegaspec)
         except IOError as e:
             return JsonResponse({'error':'not found'}, status=404)
         except json.JSONDecodeError as e:

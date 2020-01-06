@@ -1,0 +1,37 @@
+{"$schema": "https://vega.github.io/schema/vega/v4.json",
+ "width": 300,
+ "height": 150,
+ "autosize": "fit",
+ "data": [{"name": "table",
+	   "transform": [{"type":"aggregate",
+			  "groupby": ["cat"],
+			  "fields":["summ"],
+			  "ops":["sum"],
+			  "as":["sum"]},
+			 {"type": "pie",
+			  "field": "sum"}]
+	  }
+	 ],
+ "scales": [{"name": "color",
+	     "type": "ordinal",
+	     "domain": {"data": "table", "field": "cat"},
+	     "range": {"scheme": "category20"}}],
+	    "legends":[	{fill:"color"}],
+ "marks": [{"type": "arc",
+	    "from": {"data": "table"},
+	    "encode": {
+		"enter": {
+		    "fill": {"scale": "color", "field": "cat"},
+		    "x": {"signal": "width / 2"},
+		    "y": {"signal": "height / 2"}
+		},
+		"update": {
+		    "startAngle": {"field": "startAngle"},
+		    "endAngle": {"field": "endAngle"},
+		    "outerRadius": {"signal": "height / 2"},
+		    "fillOpacity": {"value": 1}
+		},
+		"hover": {"fillOpacity": {"value": 0.5} }	   
+	    }}]
+}
+	

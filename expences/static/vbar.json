@@ -1,0 +1,34 @@
+{"$schema": "https://vega.github.io/schema/vega/v4.json",
+ "width": 400,
+ "height": 300,
+ "autosize": "fit",
+ "legends":[{fill:"color"}],
+ "scales":[{name: "date", type: "band", range: "width", domain: {data: "table", field: "day"}},
+	   {name: "money", type: "linear",range: "height",nice: true, zero: true,domain: {"data": "table", "field": "s1"}},
+	   {name: "color", type: "ordinal", range: {scheme: "category20"}, domain: {data: "table", field: "cat"}}],
+ "axes":[{"orient": "bottom", "scale": "date", "zindex": 1, "labelAngle":-90,"labelAlign":"right"},
+	 {"orient": "left", "scale": "money", "zindex": 1, "grid":true,"tickCount": 5}],
+ "marks":[{"type": "rect",
+	   "from": {"data": "table"},
+	   "encode": {
+	       "enter": {
+		   "x": {"scale": "date", "field": "day"},
+		   "width": {"scale": "date", "band": 1, "offset": -1},
+		   "y": {"scale": "money", "field": "s0"},
+		   "y2": {"scale": "money", "field": "s1"},
+		   "fill": {"scale": "color", "field": "cat"}
+	       },
+	       "update": {"fillOpacity": {"value": 1}},
+	       "hover": {"fillOpacity": {"value": 0.5}}
+	   }}],
+ "data": [{"name": "table",
+	   "transform": [{"type": "stack",
+			  "groupby": ["day"],
+			  "sort": {"field": "cat"},
+			  "as" : ["s0","s1"],
+			  "field": "summ"
+			 }]
+	  }]
+};
+
+	

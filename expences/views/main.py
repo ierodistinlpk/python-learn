@@ -4,7 +4,7 @@ from django.template import loader
 from expences.models import Expuser, Expence, Location, Currency,Category
 from expences.serializers import UserSettingsSerializer, ExpenceSerializer, ExpenceShortSerializer, ExpenceDateSerializer, ExpenceCatDateSerializer, ExpenceGaugeSerializer
 from django.dispatch import receiver
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.db.models import Sum, FloatField, Count
 from django.contrib.auth.models import User
 import json
@@ -136,5 +136,7 @@ def add_Expuser(sender, instance, created,**kwargs):
         e.location,cr=Location.objects.get_or_create(name='default')
         e.save()
 
-
+@receiver(pre_save, sender=User)
+def inactivate_User(sender,instance, **kwargs):
+    instance.is_active=False
 

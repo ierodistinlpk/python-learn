@@ -1,15 +1,20 @@
 from django.shortcuts import render
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.contrib.auth.models import User
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, REDIRECT_FIELD_NAME
 from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.decorators import login_required
 from django.template import loader
 from rest_framework import serializers
 import sys, json
 from django.urls import reverse_lazy
 from django.views import generic
+from django.shortcuts import resolve_url
+from django.conf import settings
+
 #from django.db.models import CharField
 from rest_framework.validators import UniqueValidator
+from functools import wraps
 # Create your views here.
 
 #list of necessary requests
@@ -17,6 +22,59 @@ from rest_framework.validators import UniqueValidator
 # -select users with pagination
 # -save user
 # -delete user
+
+
+
+def rest_user_passes_test(test_func, login_url=None, redirect_required=False, redirect_url=None, redirect_field_name=REDIRECT_FIELD_NAME, err_code=403, err_message='forbidden'):
+    """
+    Decorator for views that checks that the user passes the given test,
+    redirecting to the log-in page if necessary. The test should be a callable
+    that takes the user object and returns True if the user passes.
+    """
+
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped_view(request, *args, **kwargs):
+            if test_func(request.user):
+                return view_func(request, *args, **kwargs)
+            if redirect_required:
+                resolved_login_url = resolve_url(login_url or settings.LOGIN_URL)
+                from django.contrib.auth.views import redirect_to_login
+                return redirect_to_login(
+                    redirect_url, resolved_login_url, redirect_field_name)
+            else:
+                return JsonResponse({'error':err_message}, status=err_code)
+        return _wrapped_view
+    return decorator
+
+def rest_login_required(function=None, redirect_url=None, login_url=None):
+    """
+    Decorator for views that checks that the user is logged in, redirecting
+    to the log-in page if necessary.
+    """
+    actual_decorator = rest_user_passes_test(
+        lambda u: u.is_authenticated,
+        login_url=login_url,
+        redirect_url=redirect_url,
+        redirect_required=True
+    )
+    if function:
+        return actual_decorator(function)
+    return actual_decorator
+
+def rest_admin_required(function=None, redirect_url=None, login_url=None):
+    """
+    Decorator for views that checks that the user has admin rights.
+    """
+    actual_decorator = rest_user_passes_test(
+        lambda u: u.is_staff
+    )
+    if function:
+        return actual_decorator(function)
+    return actual_decorator
+
+    
+@login_required #(next='/aaa/')
 def index(request):
     if request.session.get('_auth_user_id'):
         template = loader.get_template('aaa/index.html')
@@ -25,15 +83,19 @@ def index(request):
     return HttpResponse(template.render(None,request))
 
 # response format should be: {username1:{user1},username2:{user2}}
+@rest_login_required(redirect_url='/aaa')
+@rest_admin_required
 def users(request):
     #get all users from DB in json object
     users=User.objects.all()
     answer={}
-    for val in MyUserSerializer(users, many=True).data:#users.values('id','username','email','first_name','last_name'):
+    for val in MyUserSerializer(users, many=True).data:#users.values('id','username','email','first_name','last_name','is_active'):
         answer[val['id']]=val
     resp=json.dumps(answer)
     return HttpResponse(resp, content_type="application/json")
 
+@rest_login_required(redirect_url='/aaa')
+@rest_admin_required
 def save(request):
     # parse request for params and process User.update
     body_unicode = request.body.decode('utf-8')
@@ -77,12 +139,19 @@ def save(request):
     #print (answer, file=sys.stderr)
     return HttpResponse(json.dumps(answer))
 
+@rest_login_required(redirect_url='/aaa')
+@rest_admin_required
 def delete(request,userid):
-    #implement User delete here
+    user_id=request.session.get('_auth_user_id')
     user=User.objects.get(id=userid)
     user.delete()
     return HttpResponse(json.dumps({userid:None}))
 
+@rest_login_required(redirect_url='/aaa')    
+@rest_admin_required
+def confirmUser(request,userid):
+    pass
+                
 class SignUp(generic.CreateView):
     form_class = UserCreationForm
     success_url = reverse_lazy('login')
@@ -99,5 +168,5 @@ class MyUserSerializer(serializers.ModelSerializer):
     username = serializers.CharField(validators=[my_user_validator]) 
     class Meta:
         model = User
-        fields = ('id', 'username', 'first_name', 'last_name', 'email')
+        fields = ('id', 'username', 'first_name', 'last_name', 'email','is_active')
        
